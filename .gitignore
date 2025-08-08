@@ -58,7 +58,6 @@ yarn-error.log*
 .vite/
 *.tsbuildinfo
 *.lock
-*.log
 
 # Frontend build
 /dist
@@ -82,6 +81,3 @@ yarn-error.log*
 # OS-specific
 .DS_Store
 Thumbs.db
-
-# Picture
-static/
