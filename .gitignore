@@ -1,0 +1,83 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django
+*.log
+*.pot
+*.pyc
+local_settings.py
+media/
+staticfiles/
+db.sqlite3
+
+# MySQL
+*.sql
+*.dump
+
+# Virtual environments
+.env
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+*.iws
+
+# Unit test / coverage
+htmlcov/
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.pytest_cache/
+.mypy_cache/
+
+# Packaging
+*.egg-info/
+dist/
+build/
+*.manifest
+*.spec
+
+# Node.js / Vue
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.vite/
+*.tsbuildinfo
+*.lock
+
+# Frontend build
+/dist
+/public/build
+/.parcel-cache
+/.nuxt
+/.next
+/.cache
+*.map
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Backup and temp files
+*.bak
+*.swp
+*.swo
+*.tmp
+*.orig
+
+# OS-specific
+.DS_Store
+Thumbs.db
