@@ -18,7 +18,6 @@ from decouple import config, Csv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 # 加入到项目根目录搜索路径，导入的时候可以直接从源码包导入
-sys.path.insert(0, str(BASE_DIR))
 sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 
 # Quick-start development settings - unsuitable for production
@@ -41,13 +40,16 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    # "user",
-    # "shopping_cart",
-    # "product",
-    # "review",
-    # "order",
-    # "store",
-    # "payment"
+    "rest_framework",
+
+    # Custom apps
+    "apps.user",
+    "apps.shopping_cart",
+    "apps.product",
+    "apps.review",
+    "apps.order",
+    "apps.store",
+    "apps.payment"
 ]
 
 MIDDLEWARE = [
