@@ -1,83 +1,68 @@
-# Python
+# 📦 Python
 __pycache__/
 *.py[cod]
-*$py.class
-
-# Django
-*.log
-*.pot
-*.pyc
-local_settings.py
-media/
-staticfiles/
-db.sqlite3
-
-# MySQL
-*.sql
-*.dump
-
-# Virtual environments
-.env
-.venv/
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# IDEs
-.idea/
-.vscode/
-*.iml
-*.iws
-
-# Unit test / coverage
-htmlcov/
-.tox/
-.coverage
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.pytest_cache/
-.mypy_cache/
-
-# Packaging
+*.so
+*.egg
 *.egg-info/
 dist/
 build/
 *.manifest
 *.spec
 
-# Node.js / Vue
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-.vite/
-*.tsbuildinfo
-*.lock
+# 🐍 Virtual Environment
+.venv/
+venv/
+ENV/
+env/
 
-# Frontend build
-/dist
-/public/build
-/.parcel-cache
-/.nuxt
-/.next
-/.cache
-*.map
+# 📄 Environment Variables
+.env
+.env.*
 
-# Jupyter
-.ipynb_checkpoints/
+# 🧪 Testing
+.coverage
+htmlcov/
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+*.log
 
-# Backup and temp files
-*.bak
-*.swp
-*.swo
-*.tmp
-*.orig
+# 🧰 Django
+*.sqlite3
+db.sqlite3
+logs/
+staticfiles/
+media/
+*.pot
+*.pyc
+*.pyo
+*.pyd
 
-# OS-specific
+# 📦 Package Management
+pip-log.txt
+pip-delete-this-directory.txt
+
+# 📚 Documentation
+*.rst
+docs/_build/
+
+# 🧠 IDEs & Editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# 📦 OS Files
 .DS_Store
 Thumbs.db
+
+# 🚀 Deployment
+*.bak
+*.swp
+*.tmp
+
+# 📄 Misc
+*.orig
+*.rej
+*.~*
