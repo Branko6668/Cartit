@@ -10,15 +10,12 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
-import sys
 import os
 from pathlib import Path
 from decouple import config, Csv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-# 加入到项目根目录搜索路径，导入的时候可以直接从源码包导入
-sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
@@ -34,29 +31,40 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='', cast=Csv())
 # Application definition
 
 INSTALLED_APPS = [
+    # Default apps
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "rest_framework",
 
-    # Custom apps
-    "apps.user",
-    "apps.shopping_cart",
-    "apps.product",
-    "apps.review",
-    "apps.order",
-    "apps.store",
-    "apps.payment"
+    # Third-party apps
+    "rest_framework",
+    "corsheaders",
+
+    # My apps
+    "apps.product.apps.ProductConfig",
+    "apps.user.apps.UserConfig",
+    "apps.shopping_cart.apps.ShoppingCartConfig",
+    "apps.review.apps.ReviewConfig",
+    "apps.order.apps.OrderConfig",
+    "apps.store.apps.StoreConfig",
+    "apps.payment.apps.PaymentConfig"
 ]
+
+# 解决跨域问题
+# 允许所有域名跨域
+CORS_ORIGIN_ALLOW_ALL = True
+# 允许携带cookie
+CORS_ALLOW_CREDENTIALS = True
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
+    # "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -82,21 +90,23 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "core.wsgi.application"
 
-
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
     "default": {
-        "ENGINE": config('DB_ENGINE', default='django.db.backends.sqlite3'),
-        "NAME": config('DB_NAME', default=BASE_DIR / "db.sqlite3"),
-        "USER": config('DB_USER', default=''),
-        "PASSWORD": config('DB_PASSWORD', default=''),
-        "HOST": config('DB_HOST', default=''),
-        "PORT": config('DB_PORT', default='', cast=int) if config('DB_PORT', default='') else '',
+        "ENGINE": config('DB_ENGINE'),
+        "NAME": config('DB_NAME'),
+        "USER": config('DB_USER'),
+        "PASSWORD": config('DB_PASSWORD'),
+        "HOST": config('DB_HOST'),
+        "PORT": config('DB_PORT', cast=int) if config('DB_PORT') else '',
+        "OPTIONS": {
+            "charset": "utf8mb4",
+            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+        } if config('DB_ENGINE') == 'django.db.backends.mysql' else {}
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -116,13 +126,12 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
-LANGUAGE_CODE = config('LANGUAGE_CODE', default='en-us')
+LANGUAGE_CODE = config('LANGUAGE_CODE', default='zh-hans')
 
-TIME_ZONE = config('TIME_ZONE', default='UTC')
+TIME_ZONE = config('TIME_ZONE', default='Asia/Shanghai')
 
 USE_I18N = config('USE_I18N', default=True, cast=bool)
 

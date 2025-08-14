@@ -1,68 +1,72 @@
-# 📦 Python
+# Python
 __pycache__/
 *.py[cod]
-*.so
-*.egg
-*.egg-info/
-dist/
-build/
-*.manifest
-*.spec
+*$py.class
 
-# 🐍 Virtual Environment
+# Build & packaging
+build/
+dist/
+.eggs/
+*.egg-info/
+pip-wheel-metadata/
+share/python-wheels/
+
+# Logs
+*.log
+logs/
+
+# Virtual environments
 .venv/
 venv/
 ENV/
 env/
 
-# 📄 Environment Variables
-.env
-.env.*
+# Django
+media/
+staticfiles/
+static_root/
+local_settings.py
+settings_local.py
 
-# 🧪 Testing
-.coverage
+# Databases (dev)
+*.sqlite3
+*.db
+
+# Coverage & test artifacts
 htmlcov/
 .tox/
+.nox/
+.coverage
+.coverage.*
+.cache
 nosetests.xml
 coverage.xml
 *.cover
-*.log
+*.py,cover
+.pytest_cache/
 
-# 🧰 Django
-*.sqlite3
-db.sqlite3
-logs/
-staticfiles/
-media/
-*.pot
-*.pyc
-*.pyo
-*.pyd
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
 
-# 📦 Package Management
-pip-log.txt
-pip-delete-this-directory.txt
-
-# 📚 Documentation
-*.rst
-docs/_build/
-
-# 🧠 IDEs & Editors
+# IDEs & editors
 .vscode/
 .idea/
 *.sublime-project
 *.sublime-workspace
 
-# 📦 OS Files
+# OS
 .DS_Store
 Thumbs.db
 
-# 🚀 Deployment
+# dotenv
+.env
+.env.*
+
+# Temporary & backup files
 *.bak
 *.swp
 *.tmp
-
-# 📄 Misc
-*.orig
-*.rej
-*.~*
+*.temp
+*~

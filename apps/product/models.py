@@ -1,6 +1,26 @@
 from django.db import models
 
 
+class ProductTag(models.Model):
+    name = models.CharField(max_length=50, verbose_name='标签名称')
+    slug = models.SlugField(max_length=50, unique=True, verbose_name='标签标识')
+    description = models.CharField(max_length=200, blank=True, null=True, verbose_name='标签描述')
+    icon_url = models.URLField(max_length=500, blank=True, null=True, verbose_name='标签图标URL')
+    sort_order = models.IntegerField(default=0, verbose_name='排序权重')
+    is_active = models.BooleanField(default=True, verbose_name='是否启用')
+    create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'product_tag'
+        verbose_name = '商品标签'
+        verbose_name_plural = '商品标签'
+        ordering = ['-sort_order', 'id']
+
+    def __str__(self):
+        return self.name
+
+
 class Product(models.Model):
     id = models.AutoField(primary_key=True, verbose_name='商品ID')
     category = models.ForeignKey(
@@ -43,9 +63,10 @@ class Product(models.Model):
     seo_title = models.CharField(max_length=200, blank=True, null=True, verbose_name='SEO标题')
     seo_keywords = models.CharField(max_length=500, blank=True, null=True, verbose_name='SEO关键词')
     seo_description = models.CharField(max_length=500, blank=True, null=True, verbose_name='SEO描述')
-    is_hot = models.BooleanField(default=False, verbose_name='是否热门商品')
-    is_new = models.BooleanField(default=False, verbose_name='是否新品')
-    is_recommend = models.BooleanField(default=False, verbose_name='是否推荐商品')
+    tags = models.ManyToManyField(ProductTag, related_name='products', blank=True, verbose_name='商品标签')
+    # is_hot = models.BooleanField(default=False, verbose_name='是否热门商品')
+    # is_new = models.BooleanField(default=False, verbose_name='是否新品')
+    # is_recommend = models.BooleanField(default=False, verbose_name='是否推荐商品')
     is_deleted = models.BooleanField(default=False, verbose_name='是否删除')
     create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
     update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
@@ -70,6 +91,9 @@ class Category(models.Model):
     is_deleted = models.BooleanField(default=False, verbose_name='是否删除')
     create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
     update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    def __str__(self):
+        return self.name
 
     class Meta:
         db_table = 'category'
