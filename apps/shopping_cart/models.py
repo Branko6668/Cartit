@@ -1,5 +1,5 @@
 from django.db import models
-
+from django.core.validators import MinValueValidator
 
 class ShoppingCart(models.Model):
     id = models.AutoField(primary_key=True, verbose_name='购物车ID')
@@ -18,7 +18,12 @@ class ShoppingCart(models.Model):
     )
     quantity = models.PositiveIntegerField(
         default=1,
+        validators=[MinValueValidator(0)],
         verbose_name='商品数量'
+    )
+    selected = models.BooleanField(
+        default=True,
+        verbose_name='是否选中结算'
     )
     create_time = models.DateTimeField(
         auto_now_add=True,
@@ -34,3 +39,7 @@ class ShoppingCart(models.Model):
         verbose_name = '购物车'
         verbose_name_plural = '购物车'
         unique_together = (('user', 'product'),)
+        ordering = ['-update_time']
+
+    def __str__(self):
+        return f"{self.user} - {self.product} × {self.quantity}"

@@ -2,6 +2,7 @@ from django.db import models
 
 
 class ProductTag(models.Model):
+    id = models.AutoField(primary_key=True, verbose_name='标签ID')
     name = models.CharField(max_length=50, verbose_name='标签名称')
     slug = models.SlugField(max_length=50, unique=True, verbose_name='标签标识')
     description = models.CharField(max_length=200, blank=True, null=True, verbose_name='标签描述')
@@ -11,14 +12,14 @@ class ProductTag(models.Model):
     create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
     update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
 
+    def __str__(self):
+        return self.name
+
     class Meta:
         db_table = 'product_tag'
         verbose_name = '商品标签'
         verbose_name_plural = '商品标签'
         ordering = ['-sort_order', 'id']
-
-    def __str__(self):
-        return self.name
 
 
 class Product(models.Model):
@@ -71,6 +72,20 @@ class Product(models.Model):
     create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
     update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
 
+    def __str__(self):
+        return self.name
+
+    # 视图用的精简序列化（商品卡片）
+    def to_card_dict(self) -> dict:
+        return {
+            'id': self.id,
+            'name': self.name,
+            'price': str(self.price),
+            'thumbnail': self.thumbnail,
+            'sales_count': self.sales_count,
+            'view_count': self.view_count,
+        }
+
     class Meta:
         db_table = 'product'
         verbose_name = '商品信息'
@@ -94,6 +109,13 @@ class Category(models.Model):
 
     def __str__(self):
         return self.name
+
+    # 视图用的精简序列化（菜单）
+    def to_menu_item(self) -> dict:
+        return {
+            'id': self.id,
+            'name': self.name,
+        }
 
     class Meta:
         db_table = 'category'

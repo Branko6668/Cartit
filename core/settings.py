@@ -126,6 +126,12 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+REST_FRAMEWORK = {
+    "DEFAULT_RENDERER_CLASSES": [
+        "utils.renderer.CustomJSONRenderer",
+    ],
+}
+
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
@@ -146,7 +152,8 @@ STATIC_URL = config('STATIC_URL', default='/static/')
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
 ]
-
+# 图片访问地址
+IMAGE_URL = config('IMAGE_URL', default='http://localhost:8000/')
 # 生产环境静态文件收集目录
 STATIC_ROOT = config('STATIC_ROOT', default='')
 

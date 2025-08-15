@@ -16,16 +16,11 @@ core 项目的 URL 配置。
 """
 
 from django.contrib import admin
-from django.urls import path
-from apps.product.views import ProductMainMenuView
-from apps.product.views import ProductSubMenuView
-from apps.product.views import ProductSubSubMenuView
-
+from django.urls import path, include
 
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("product/main_menu/", ProductMainMenuView.as_view(), name="product_main_menu"),
-    path("product/sub_menu/", ProductSubMenuView.as_view(), name="product_sub_menu"),
-    path("product/sub_sub_menu/", ProductSubSubMenuView.as_view(), name="product_sub_sub_menu")
+    path("product/", include("apps.product.urls")),
+    path("shopping_cart/", include("apps.shopping_cart.urls"))
 ]
