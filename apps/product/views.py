@@ -1,8 +1,10 @@
+from django.core.paginator import Paginator
 from rest_framework.views import APIView
 from apps.product.models import Category
 from apps.product.models import Product
 from apps.product.serializers import ProductSerializer
 from utils.renderer import CustomResponse
+from rest_framework.generics import ListAPIView
 
 
 class ProductMainMenuView(APIView):
@@ -61,30 +63,49 @@ class ProductSubSubMenuView(APIView):
         return CustomResponse(code=1002, msg="获取子子菜单成功", data=result_list, status=200)
 
 
-class ProductTagAPIView(APIView):
+class ProductTagAPIView(ListAPIView):
     """
     商品标签 API 视图
     路由：product/tags/<int:product_tag_id>/<int:page>/
     仅处理 GET 请求
     """
-
-    def get(self, request, product_tag_id, page):
+    serializer_class = ProductSerializer
+    def list(self, request, *args, **kwargs):
         try:
-            tag_id = int(product_tag_id)
-            page_num = int(page)
+            page = int(kwargs.get("page"))
+            tag_id = int(kwargs.get("product_tag_id"))
         except (TypeError, ValueError):
-            return CustomResponse(code=2400, msg="参数格式错误: product_tag_id 与 page 应为整数", errors={"product_tag_id": "invalid", "page": "invalid"}, status=400)
-        if page_num <= 0:
-            return CustomResponse(code=2400, msg="参数错误: page 必须大于 0", errors={"page": "min_value"}, status=400)
-
-        page_size = 20
-        start = (page_num - 1) * page_size
-        end = page_num * page_size
-        products = Product.objects.filter(tags__id=tag_id)
-        paged_products = products[start:end]
-        serialized_data = ProductSerializer(instance=paged_products, many=True).data
-        return CustomResponse(code=2000, msg="获取标签商品成功", data=serialized_data, status=200)
-
+            return CustomResponse(
+                code=2400,
+                msg="参数错误，page与product_tag_id应为整数",
+                errors={"product_tag_id": "invalid", "page": "invalid"},
+                status=400
+            )
+        if page <= 0:
+            return CustomResponse(
+                code=2400,
+                msg="page不能小于等于0",
+                errors={"page": "invalid"},
+                status=400
+            )
+        queryset = Product.objects.filter(tags__id=tag_id)
+        paginator = Paginator(queryset, 20)
+        try:
+            page = paginator.get_page(page)
+        except Exception:
+            return CustomResponse(
+                code=2400,
+                msg="页面超出范围",
+                errors={"page": "out of range"},
+                status=404
+            )
+        page_serialize = self.get_serializer(page.object_list, many=True)
+        return CustomResponse(
+            code=2000,
+            msg="",
+            data=page_serialize.data,
+            status=200
+        )
 
 class ProductQueryAPIView(APIView):
     """
