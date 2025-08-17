@@ -101,7 +101,7 @@ class ProductQueryAPIView(APIView):
         try:
             product_data = Product.objects.get(id=product_id)
         except Product.DoesNotExist:
-            return CustomResponse(code=2404, msg="商品不存在", errors={"id": product_id}, status=404)
+            return CustomResponse(code=2400, msg="商品不存在", errors={"id": product_id}, status=404)
 
         result = ProductSerializer(instance=product_data).data
         return CustomResponse(code=2001, msg="获取商品详情成功", data=result, status=200)

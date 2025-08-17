@@ -39,7 +39,7 @@ class ShoppingCartAPIView(APIView):
             return CustomResponse(code=3400, msg="参数格式错误: user_id/product_id/quantity 应为整数", errors={"user_id": "int", "product_id": "int", "quantity": "int"}, status=400)
 
         if quantity == 0:
-            return CustomResponse(code=4000, msg='无效更新操作', data=None, status=400)
+            return CustomResponse(code=3400, msg='无效更新操作', data=None, status=400)
 
         # 判断数据是否存在，否则就创建新的购物车项
         data_exists = ShoppingCart.objects.filter(user_id=user_id, product_id=product_id)
@@ -51,7 +51,7 @@ class ShoppingCartAPIView(APIView):
                 shopping_cart_item.delete()
                 return CustomResponse(code=3002, msg='商品已从购物车移除', data=None, status=200)
             elif shopping_cart_item.quantity < 0:
-                return CustomResponse(code=4000, msg='商品数量不能小于0', data=None, status=400)
+                return CustomResponse(code=3400, msg='商品数量不能小于0', data=None, status=400)
             else:
                 shopping_cart_item.save()
                 shopping_cart_serialize = ShoppingCartSerializer(shopping_cart_item)
