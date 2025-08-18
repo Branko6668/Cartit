@@ -25,6 +25,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     )
     password = serializers.CharField(write_only=False)  # 会覆盖 extra_kwargs 的设置
     birthday = serializers.DateField(format="%Y-%m-%d",required=False)
+    avatar_url = serializers.CharField(required=False, allow_blank=True)
 
     def create(self, validated_data):
         print("create方法被调用")

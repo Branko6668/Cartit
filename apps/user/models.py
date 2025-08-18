@@ -18,7 +18,7 @@ class User(models.Model):
     phone = models.CharField(max_length=11, unique=True, blank=True, null=True, verbose_name='手机号')
     email = models.EmailField(max_length=100, unique=True, blank=True, null=True, verbose_name='邮箱')
     password = models.CharField(max_length=255, verbose_name='密码')
-    avatar_url = models.URLField(max_length=500, blank=True, null=True, verbose_name='头像URL')
+    avatar_url = models.CharField(max_length=500, blank=True, null=True, verbose_name='头像URL')
     gender = models.CharField(max_length=6, choices=GENDER_CHOICES, default='other', verbose_name='性别')
     birthday = models.DateField(blank=True, null=True, verbose_name='生日')
     status = models.CharField(max_length=8, choices=STATUS_CHOICES, default='active', verbose_name='账户状态')

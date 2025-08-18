@@ -2,7 +2,6 @@ from rest_framework.views import APIView
 from utils.renderer import CustomResponse
 from apps.user.serializers import UserRegisterSerializer, UserMeSerializer
 from apps.user.models import User
-from django.contrib.auth.hashers import make_password, check_password
 
 
 class UserRegisterAPIView(APIView):
