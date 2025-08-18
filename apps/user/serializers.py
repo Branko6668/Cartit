@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
-from apps.user.models import User
+from apps.user.models import User, UserAddress
 from django.contrib.auth.hashers import make_password
 
 
@@ -49,3 +49,9 @@ class UserMeSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         exclude = ['password', 'is_deleted', 'create_time', 'update_time', 'status']
+
+
+class UserAddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserAddress
+        fields = "__all__"

@@ -1,7 +1,9 @@
 from rest_framework.views import APIView
+from rest_framework.generics import GenericAPIView
+from rest_framework.mixins import CreateModelMixin, RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin, ListModelMixin
 from utils.renderer import CustomResponse
-from apps.user.serializers import UserRegisterSerializer, UserMeSerializer
-from apps.user.models import User
+from apps.user.serializers import UserRegisterSerializer, UserMeSerializer, UserAddressSerializer
+from apps.user.models import User, UserAddress
 
 
 class UserRegisterAPIView(APIView):
@@ -85,3 +87,34 @@ class UserMeAPIView(APIView):
         me_data = me_data.first()
         me_serializer = UserMeSerializer(me_data)
         return CustomResponse(code=4000, msg='获取用户信息成功', data=me_serializer.data, status=200)
+
+
+class UserAddressAPIView(GenericAPIView, CreateModelMixin, RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin):
+    queryset = UserAddress.objects.all()
+    serializer_class = UserAddressSerializer
+    # lookup_field = "user"
+    # #
+    # def get_queryset(self):
+    #     id = self.kwargs.get("pk")
+    #     return self.queryset.filter(pk=id)
+
+    def post(self, request):
+        return self.create(request)
+
+    def get(self, request, pk):
+        return self.retrieve(request)
+
+    def put(self, request, pk):
+        return self.update(request)
+
+    # def delete(self, request, pk):
+    #     return self.destroy(request)
+
+class UserAddressListAPIView(GenericAPIView, ListModelMixin):
+    serializer_class = UserAddressSerializer
+
+    def get_queryset(self):
+        return UserAddress.objects.filter(is_deleted=False)
+
+    def get(self, request):
+        return self.list(request)

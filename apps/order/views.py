@@ -24,7 +24,7 @@ class OrderCreateAPIView(APIView):
                 return CustomResponse(code=3400, msg=f"收件人信息缺失: {field}", errors={field: "required"}, status=HTTP_400_BAD_REQUEST)
 
         remark = data.get("remark", "")
-        user_id = 15  # ✅ 开发阶段写死
+        user_id = 9  # ✅ 开发阶段写死
 
         try:
             orders = create_orders_from_cart(user_id=user_id, recipient=recipient, remark=remark)
@@ -57,7 +57,7 @@ class DirectOrderCreateAPIView(APIView):
                 return CustomResponse(code=3400, msg=f"收件人信息缺失: {field}", errors={field: "required"}, status=HTTP_400_BAD_REQUEST)
 
         remark = data.get("remark", "")
-        user_id = 15  # 开发阶段写死
+        user_id = 9  # 开发阶段写死
 
         try:
             order = create_order_direct(user_id=user_id, product_id=product_id, quantity=quantity, recipient=recipient, remark=remark)
