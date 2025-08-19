@@ -23,12 +23,12 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         required=False,
         validators=[UniqueValidator(queryset=User.objects.all(), message="邮箱已存在")]
     )
-    password = serializers.CharField(write_only=False)  # 会覆盖 extra_kwargs 的设置
+    password = serializers.CharField(write_only=True)  # 会覆盖 extra_kwargs 的设置
     birthday = serializers.DateField(format="%Y-%m-%d",required=False)
     avatar_url = serializers.CharField(required=False, allow_blank=True)
 
     def create(self, validated_data):
-        print("create方法被调用")
+        # print("create方法被调用")
         # 对密码进行加密处理
         validated_data['password'] = make_password(validated_data['password'])
         user = User.objects.create(**validated_data)
