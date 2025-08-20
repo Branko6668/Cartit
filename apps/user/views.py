@@ -1,3 +1,13 @@
+"""
+User 模块视图
+
+包含：
+- 用户注册/登录/登出/更新/注销
+- 查询当前用户信息（支持 username/email/phone）
+- 用户地址的增删改查与列表
+
+所有接口统一返回 CustomResponse，鉴权与 JWT 可在后续接入。
+"""
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.views import APIView
 from rest_framework.generics import GenericAPIView
@@ -10,14 +20,13 @@ from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
 from django.contrib.auth.hashers import check_password, make_password
 from utils.jwt_auth import generate_token
-from rest_framework.permissions import IsAuthenticated
 
 
 class UserRegisterAPIView(APIView):
     """
     用户注册 API 视图
-    访问方式：user/register/
-    仅处理 POST 请求
+    路由：/user/register/
+    方法：POST
     """
     def post(self, request: Request):
         user_serializer = UserRegisterSerializer(data=request.data)
@@ -31,8 +40,8 @@ class UserRegisterAPIView(APIView):
 class UserLoginAPIView(GenericAPIView):
     """
     用户登录 API 视图
-    访问方式：user/login/
-    仅处理 POST 请求
+    路由：/user/login/
+    方法：POST
     """
     def post(self, request: Request):
         phone = request.data.get("phone")
@@ -61,8 +70,8 @@ class UserLoginAPIView(GenericAPIView):
 class UserLogoutAPIView(APIView):
     """
     用户登出 API 视图
-    访问方式：user/logout/
-    仅处理 POST 请求
+    路由：/user/logout/
+    方法：POST
     """
     def post(self, request: Request):
         return CustomResponse(code=4000, msg="登出成功", data=None, status=200)
@@ -70,9 +79,9 @@ class UserLogoutAPIView(APIView):
 
 class UserUpdateAPIView(APIView):
     """
-    用户更新 API 视图
-    访问方式：user/update/
-    仅处理 PUT 请求
+    用户资料更新 API 视图
+    路由：/user/update/
+    方法：PUT
     """
     def put(self, request: Request):
         user_id = request.data.get("id")
@@ -101,9 +110,9 @@ class UserUpdateAPIView(APIView):
 
 class UserDeleteAPIView(APIView):
     """
-    用户注销 API 视图
-    访问方式：user/delete/
-    仅处理 DELETE 请求
+    用户注销 API 视图（软删除：is_deleted=True, status=disabled）
+    路由：/user/delete/
+    方法：DELETE
     """
     def delete(self, request: Request):
         user_id = request.query_params.get("id") or request.data.get("id")
@@ -120,8 +129,9 @@ class UserDeleteAPIView(APIView):
 class UserMeAPIView(APIView):
     """
     获取当前用户信息 API 视图
-    访问方式：user/me/
-    仅处理 GET 请求
+    路由：/user/me/
+    方法：GET
+    支持通过 username/email/phone 三选一查询
     """
     def get(self, request: Request):
         query_me = None
@@ -151,10 +161,20 @@ class UserMeAPIView(APIView):
 
 
 class UserAddressAPIView(GenericAPIView, CreateModelMixin, RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin):
+    """用户地址的创建/查询/更新/删除。
+
+    路由：
+      - POST   /user/address/
+      - GET    /user/address/<pk>/
+      - PUT    /user/address/<pk>/
+      - DELETE /user/address/<pk>/
+    """
+
     queryset = UserAddress.objects.all()
     serializer_class = UserAddressSerializer
 
     def post(self, request: Request):
+        """创建地址。"""
         serializer = self.get_serializer(data=request.data)
         if not serializer.is_valid():
             return CustomResponse(code=4400, msg='请求参数不合法', errors=serializer.errors, status=400)
@@ -162,10 +182,12 @@ class UserAddressAPIView(GenericAPIView, CreateModelMixin, RetrieveModelMixin, U
         return CustomResponse(code=4000, msg='创建地址成功', data=self.get_serializer(instance).data, status=200)
 
     def get(self, request: Request, pk):
+        """获取地址详情。"""
         instance = get_object_or_404(UserAddress, pk=pk, is_deleted=False)
         return CustomResponse(code=4000, msg='获取地址成功', data=self.get_serializer(instance).data, status=200)
 
     def put(self, request: Request, pk):
+        """更新地址信息（部分字段可选）。"""
         instance = get_object_or_404(UserAddress, pk=pk, is_deleted=False)
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         if not serializer.is_valid():
@@ -174,6 +196,7 @@ class UserAddressAPIView(GenericAPIView, CreateModelMixin, RetrieveModelMixin, U
         return CustomResponse(code=4000, msg='更新地址成功', data=self.get_serializer(instance).data, status=200)
 
     def delete(self, request: Request, pk):
+        """软删除地址（is_deleted=True）。"""
         instance = get_object_or_404(UserAddress, pk=pk, is_deleted=False)
         instance.is_deleted = True
         instance.save(update_fields=["is_deleted"])
@@ -181,6 +204,8 @@ class UserAddressAPIView(GenericAPIView, CreateModelMixin, RetrieveModelMixin, U
 
 
 class UserAddressListAPIView(GenericAPIView, ListModelMixin):
+    """获取用户地址列表（支持按 user 或 user_id 过滤）。"""
+
     serializer_class = UserAddressSerializer
     # permission_classes = [IsAuthenticated]
 
@@ -193,6 +218,7 @@ class UserAddressListAPIView(GenericAPIView, ListModelMixin):
         return qs
 
     def get(self, request: Request):
+        """获取地址列表。"""
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         return CustomResponse(code=4000, msg='获取地址列表成功', data=serializer.data, status=200)

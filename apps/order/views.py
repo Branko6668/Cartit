@@ -1,18 +1,32 @@
+"""
+Order 模块视图
+
+- 提供创建订单（基于购物车）与直接下单接口
+- 使用 CustomResponse 统一响应结构
+- 开发阶段 user_id 写死为 9，后续可替换为认证上下文
+"""
+from typing import Any, Dict
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.status import HTTP_201_CREATED, HTTP_400_BAD_REQUEST
-from apps.order.models import OrderInfo
 from apps.order.serializers import OrderInfoSerializer
 from utils.renderer import CustomResponse
 from .services import create_orders_from_cart, create_order_direct
 
 
 class OrderCreateAPIView(APIView):
+    """基于购物车创建订单。
+
+    请求体：
+      - recipient: {name, phone, address}
+      - remark: 可选
+    返回：创建出的订单列表
+    """
+
     permission_classes = []
 
     def post(self, request: Request):
-        data = request.data or {}
+        data: Dict[str, Any] = request.data or {}
         required_fields = ["recipient"]
         missing = [f for f in required_fields if f not in data]
         if missing:
@@ -24,7 +38,7 @@ class OrderCreateAPIView(APIView):
                 return CustomResponse(code=3400, msg=f"收件人信息缺失: {field}", errors={field: "required"}, status=HTTP_400_BAD_REQUEST)
 
         remark = data.get("remark", "")
-        user_id = 9  # ✅ 开发阶段写死
+        user_id = 9  # ✅ 开发阶段写死，TODO: 从认证上下文获取
 
         try:
             orders = create_orders_from_cart(user_id=user_id, recipient=recipient, remark=remark)
@@ -36,10 +50,20 @@ class OrderCreateAPIView(APIView):
 
 
 class DirectOrderCreateAPIView(APIView):
+    """直接购买下单。
+
+    请求体：
+      - product_id: int
+      - quantity: int
+      - recipient: {name, phone, address}
+      - remark: 可选
+    返回：创建出的单个订单
+    """
+
     permission_classes = []
 
     def post(self, request: Request):
-        data = request.data or {}
+        data: Dict[str, Any] = request.data or {}
         required_fields = ["product_id", "quantity", "recipient"]
         missing = [f for f in required_fields if f not in data]
         if missing:
@@ -57,7 +81,7 @@ class DirectOrderCreateAPIView(APIView):
                 return CustomResponse(code=3400, msg=f"收件人信息缺失: {field}", errors={field: "required"}, status=HTTP_400_BAD_REQUEST)
 
         remark = data.get("remark", "")
-        user_id = 9  # 开发阶段写死
+        user_id = 9  # 开发阶段写死，TODO: 从认证上下文获取
 
         try:
             order = create_order_direct(user_id=user_id, product_id=product_id, quantity=quantity, recipient=recipient, remark=remark)

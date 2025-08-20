@@ -1,11 +1,34 @@
-# renderer.py
+"""
+自定义响应与渲染器
 
+- CustomResponse: 统一接口返回结构，包含 code/msg/data，可选 action/errors/sub_code
+- CustomJSONRenderer: 将普通 DRF 数据或异常转换为统一结构，并附加可选 trace_id
+
+使用建议：
+- 视图中直接返回 CustomResponse，以保持结构一致
+- 对于未使用 CustomResponse 的场景，渲染器会自动封装 2xx/非 2xx 响应
+"""
+
+from typing import Any, Dict, Optional
 from rest_framework.response import Response
 from rest_framework.renderers import JSONRenderer
 
+
 class CustomResponse(Response):
+    """统一响应体。
+
+    参数:
+      - code: 业务状态码（默认 0 代表成功，可自定义）
+      - msg: 描述信息（默认 "success"）
+      - data: 业务数据（任意类型）
+      - status: HTTP 状态码（默认 200）
+      - action: 客户端可选指令（如跳转、刷新等）
+      - errors: 详细错误（如表单校验错误字典）
+      - sub_code: 子错误码（细分错误场景）
+    """
+
     def __init__(self, code=0, msg="success", data=None, status=200, action=None, errors=None, sub_code=None, **kwargs):
-        content = {
+        content: Dict[str, Any] = {
             "code": code,
             "msg": msg,
             "data": data,
@@ -20,10 +43,19 @@ class CustomResponse(Response):
 
 
 class CustomJSONRenderer(JSONRenderer):
-    def render(self, data, accepted_media_type=None, renderer_context=None):
-        response = renderer_context.get("response")
-        request = renderer_context.get("request")
-        status_code = response.status_code
+    """将任意 DRF 响应按统一结构输出。
+
+    行为:
+      - 已是标准结构（包含 code/msg）: 透传
+      - 2xx 响应: 自动包装为 {code: 2xx, msg: "success", data}
+      - 非 2xx 响应: 提取 detail 为 msg，其余放入 errors
+      - 支持附加 trace_id（从 request.trace_id 获取）
+    """
+
+    def render(self, data: Any, accepted_media_type: Optional[str] = None, renderer_context: Optional[Dict[str, Any]] = None):
+        response = renderer_context.get("response") if renderer_context else None
+        request = renderer_context.get("request") if renderer_context else None
+        status_code = getattr(response, "status_code", 200)
         trace_id = getattr(request, "trace_id", None)
 
         # 如果已经是标准结构，直接渲染

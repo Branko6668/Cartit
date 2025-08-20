@@ -1,3 +1,11 @@
+"""
+Product 模块视图
+
+- 提供分类菜单与商品详情/标签列表接口
+- 统一使用 CustomResponse 返回结构
+"""
+
+from typing import Any
 from django.core.paginator import Paginator
 from rest_framework.views import APIView
 from apps.product.models import Category
@@ -8,11 +16,8 @@ from rest_framework.generics import ListAPIView
 
 
 class ProductMainMenuView(APIView):
-    """
-    商品主菜单视图
-    访问方式：product/main_menu/
-    仅处理 GET 请求
-    """
+    """获取一级分类菜单（parent_id=0）。路由：/product/main_menu/"""
+
     @staticmethod
     def get(request):
         # 顶级分类（parent_id=0）
@@ -22,11 +27,8 @@ class ProductMainMenuView(APIView):
 
 
 class ProductSubMenuView(APIView):
-    """
-    商品子菜单视图
-    访问方式：product/sub_menu/
-    仅处理 GET 请求
-    """
+    """获取二级分类菜单。路由：/product/sub_menu/?main_menu_id=<int>"""
+
     @staticmethod
     def get(request):
         main_menu_id = request.query_params.get("main_menu_id")
@@ -43,11 +45,8 @@ class ProductSubMenuView(APIView):
 
 
 class ProductSubSubMenuView(APIView):
-    """
-    商品子子菜单视图
-    访问方式：product/sub_sub_menu/
-    仅处理 GET 请求
-    """
+    """获取三级分类菜单。路由：/product/sub_sub_menu/?sub_menu_id=<int>"""
+
     @staticmethod
     def get(request):
         sub_menu_id = request.query_params.get("sub_menu_id")
@@ -64,13 +63,11 @@ class ProductSubSubMenuView(APIView):
 
 
 class ProductTagAPIView(ListAPIView):
-    """
-    商品标签 API 视图
-    路由：product/tags/<int:product_tag_id>/<int:page>/
-    仅处理 GET 请求
-    """
+    """按标签获取商品列表。路由：/product/tag/<product_tag_id>/<page>/"""
+
     serializer_class = ProductSerializer
-    def list(self, request, *args, **kwargs):
+
+    def list(self, request, *args: Any, **kwargs: Any):
         try:
             page = int(kwargs.get("page"))
             tag_id = int(kwargs.get("product_tag_id"))
@@ -107,13 +104,11 @@ class ProductTagAPIView(ListAPIView):
             status=200
         )
 
+
 class ProductQueryAPIView(APIView):
-    """
-    商品详情查询 API 视图
-    路由：product/query/<int:id>/
-    仅处理 GET 请求
-    """
-    def get(self, request, id):
+    """查询商品详情。路由：/product/query/<id>/"""
+
+    def get(self, request, id: int):
         try:
             product_id = int(id)
         except (TypeError, ValueError):

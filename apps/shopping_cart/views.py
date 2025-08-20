@@ -1,3 +1,12 @@
+"""
+Shopping Cart 模块视图
+
+- 提供查询与添加/更新购物车条目的接口
+- 统一返回 CustomResponse
+- TODO: 后续可接入认证，使用当前登录用户而非显式 user_id
+"""
+
+from typing import Any, Dict
 from rest_framework.views import APIView
 from apps.shopping_cart.models import ShoppingCart
 from apps.shopping_cart.serializers import ShoppingCartSerializer
@@ -8,11 +17,14 @@ class ShoppingCartAPIView(APIView):
     # @todo: 登录权限验证
     """
     购物车 API 视图
-    访问方式：shopping_cart/
-    处理 GET 和 POST 请求
+    路由：/shopping_cart/
+    方法：GET/POST
+    - GET  按 user_id 查询购物车
+    - POST 添加或更新购物车条目（数量为 0 表示移除）
     """
+
     def get(self, request):
-        # 获取购物车信息
+        """获取指定 user_id 的购物车列表。"""
         user_id = request.query_params.get("user_id")
         if user_id is None:
             return CustomResponse(code=3400, msg="缺少参数: user_id", errors={"user_id": "required"}, status=400)
@@ -26,8 +38,8 @@ class ShoppingCartAPIView(APIView):
         return CustomResponse(code=3000, msg='获取购物车信息成功', data=shopping_cart_serialize.data, status=200)
 
     def post(self, request):
-        # 添加商品到购物车 / 更新数量 / 数量为 0 则删除
-        request_data = request.data or {}
+        """添加/更新购物车条目；当累加后数量为 0 时删除该条目。"""
+        request_data: Dict[str, Any] = request.data or {}
         missing = [k for k in ("user_id", "product_id", "quantity") if k not in request_data]
         if missing:
             return CustomResponse(code=3400, msg="缺少必要参数", errors={k: "required" for k in missing}, status=400)
