@@ -1,0 +1,183 @@
+# PyCharm HTTP Client requests
+# 使用方法：在 PyCharm 右上角选择环境 dev（来自 http-client.env.json），然后逐个发送请求。
+# 认证头使用 Token: {{token}}，先执行登录请求以写入 token。
+
+### User - Register
+POST {{base_url}}/user/register/
+Content-Type: application/json
+
+{
+  "username": "tom",
+  "phone": "13800000001",
+  "email": "tom@example.com",
+  "password": "Passw0rd!",
+  "birthday": "1990-01-01",
+  "avatar_url": "/static/user_avatar_images/01.png"
+}
+
+### User - Login (sets global token)
+POST {{base_url}}/user/login/
+Content-Type: application/json
+
+{
+  "phone": "13733715212",
+  "password": "200249"
+}
+
+> {%
+  const body = JSON.parse(response.body || '{}');
+  const token = body?.data?.token || body?.token;
+  if (token) {
+    client.global.set("token", token);
+  }
+%}
+
+### User - Logout
+POST {{base_url}}/user/logout/
+Token: {{token}}
+
+### User - Me
+GET {{base_url}}/user/me/?username=tom
+Token: {{token}}
+
+### Address - Create
+POST {{base_url}}/user/address/
+Content-Type: application/json
+Token: {{token}}
+
+{
+  "user": 9,
+  "recipient_name": "张三",
+  "recipient_phone": "13800000000",
+  "province": "上海",
+  "city": "上海",
+  "district": "徐汇区",
+  "detail_address": "漕溪北路YYY号",
+  "postal_code": "200000",
+  "is_default": false
+}
+
+### Address - Get detail
+GET {{base_url}}/user/address/1/
+Token: {{token}}
+
+### Address - Update
+PUT {{base_url}}/user/address/1/
+Content-Type: application/json
+Token: {{token}}
+
+{
+  "recipient_phone": "13800000001",
+  "is_default": true
+}
+
+### Address - Delete
+DELETE {{base_url}}/user/address/1/
+Token: {{token}}
+
+### Address - List
+GET {{base_url}}/user/address/list/?user=9
+Token: {{token}}
+
+### Product - Main menu
+GET {{base_url}}/product/main_menu/
+
+### Product - Sub menu
+GET {{base_url}}/product/sub_menu/?main_menu_id=1
+
+### Product - Sub sub menu
+GET {{base_url}}/product/sub_sub_menu/?sub_menu_id=2
+
+### Product - Tag products
+GET {{base_url}}/product/tag/12/1/
+
+### Product - Query detail
+GET {{base_url}}/product/query/1001/
+
+### Shopping Cart - Get by user
+GET {{base_url}}/shopping_cart/?user_id=9
+Token: {{token}}
+
+### Shopping Cart - Add or update
+POST {{base_url}}/shopping_cart/
+Content-Type: application/json
+Token: {{token}}
+
+{
+  "user_id": 9,
+  "product_id": 1001,
+  "quantity": 2
+}
+
+### Order - Create from cart
+POST {{base_url}}/order/create/
+Content-Type: application/json
+Token: {{token}}
+
+{
+  "recipient": {
+    "name": "张三",
+    "phone": "13800000000",
+    "address": "上海市徐汇区漕溪北路XXX号"
+  },
+  "remark": "请尽快发货"
+}
+
+### Order - Direct buy
+POST {{base_url}}/order/direct/
+Content-Type: application/json
+Token: {{token}}
+
+{
+  "product_id": 1001,
+  "quantity": 1,
+  "recipient": {
+    "name": "张三",
+    "phone": "13800000000",
+    "address": "上海市徐汇区漕溪北路XXX号"
+  },
+  "remark": "礼品包装"
+}
+
+### Review - List
+GET {{base_url}}/review/?page=1&page_size=10
+
+### Review - Create
+POST {{base_url}}/review/
+Content-Type: application/json
+Token: {{token}}
+
+{
+  "order_item": 1,
+  "content": "很好",
+  "rating": 5,
+  "images": ["static/review_images/01.png"]
+}
+
+### Review - Retrieve
+GET {{base_url}}/review/123/
+
+### Review - Update (partial)
+PATCH {{base_url}}/review/123/
+Content-Type: application/json
+Token: {{token}}
+
+{
+  "content": "更新后的评价",
+  "rating": 4,
+  "images": ["static/review_images/01.png", "/static/product_images/blue.png"]
+}
+
+### Review - Delete (soft)
+DELETE {{base_url}}/review/123/
+Token: {{token}}
+
+### Review - Query by user
+GET {{base_url}}/review/user/9/?page=1&page_size=10
+
+### Review - Query by product
+GET {{base_url}}/review/product/1001/?page=1&page_size=10
+
+### Review - Query by store
+GET {{base_url}}/review/store/5/?page=1&page_size=10
+
