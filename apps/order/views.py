@@ -12,6 +12,7 @@ from rest_framework.status import HTTP_201_CREATED, HTTP_400_BAD_REQUEST
 from apps.order.serializers import OrderInfoSerializer
 from utils.renderer import CustomResponse
 from .services import create_orders_from_cart, create_order_direct
+from utils.error_codes import Codes
 
 
 class OrderCreateAPIView(APIView):
@@ -30,12 +31,12 @@ class OrderCreateAPIView(APIView):
         required_fields = ["recipient"]
         missing = [f for f in required_fields if f not in data]
         if missing:
-            return CustomResponse(code=3400, msg="缺少必要参数", errors={f: "required" for f in missing}, status=HTTP_400_BAD_REQUEST)
+            return CustomResponse(code=Codes.CART_OR_ORDER_PARAM_ERROR, msg="缺少必要参数", errors={f: "required" for f in missing}, status=HTTP_400_BAD_REQUEST)
 
         recipient = data.get("recipient", {})
         for field in ["name", "phone", "address"]:
             if field not in recipient or not recipient[field]:
-                return CustomResponse(code=3400, msg=f"收件人信息缺失: {field}", errors={field: "required"}, status=HTTP_400_BAD_REQUEST)
+                return CustomResponse(code=Codes.CART_OR_ORDER_PARAM_ERROR, msg=f"收件人信息缺失: {field}", errors={field: "required"}, status=HTTP_400_BAD_REQUEST)
 
         remark = data.get("remark", "")
         user_id = 9  # ✅ 开发阶段写死，TODO: 从认证上下文获取
@@ -43,10 +44,11 @@ class OrderCreateAPIView(APIView):
         try:
             orders = create_orders_from_cart(user_id=user_id, recipient=recipient, remark=remark)
         except ValueError as e:
-            return CustomResponse(code=3401, msg="订单创建失败", errors={"detail": str(e)}, status=HTTP_400_BAD_REQUEST)
+            return CustomResponse(code=Codes.ORDER_CREATE_FAILED, msg="订单创建失败", errors={"detail": str(e)}, status=HTTP_400_BAD_REQUEST)
 
         serialized = [OrderInfoSerializer(o).data for o in orders]
-        return CustomResponse(code=3000, msg="订单创建成功", data=serialized, status=HTTP_201_CREATED)
+        # 兼容现有前端仍返回 3000（Codes.CART_LIST_OK / ORDER_CREATE_OK_ALIAS）
+        return CustomResponse(code=Codes.ORDER_CREATE_OK_ALIAS, msg="订单创建成功", data=serialized, status=HTTP_201_CREATED)
 
 
 class DirectOrderCreateAPIView(APIView):
@@ -67,18 +69,18 @@ class DirectOrderCreateAPIView(APIView):
         required_fields = ["product_id", "quantity", "recipient"]
         missing = [f for f in required_fields if f not in data]
         if missing:
-            return CustomResponse(code=3400, msg="缺少必要参数", errors={f: "required" for f in missing}, status=HTTP_400_BAD_REQUEST)
+            return CustomResponse(code=Codes.CART_OR_ORDER_PARAM_ERROR, msg="缺少必要参数", errors={f: "required" for f in missing}, status=HTTP_400_BAD_REQUEST)
 
         try:
             product_id = int(data["product_id"])
             quantity = int(data["quantity"])
         except (TypeError, ValueError):
-            return CustomResponse(code=3400, msg="参数格式错误", errors={"product_id": "int", "quantity": "int"}, status=HTTP_400_BAD_REQUEST)
+            return CustomResponse(code=Codes.CART_OR_ORDER_PARAM_ERROR, msg="参数格式错误", errors={"product_id": "int", "quantity": "int"}, status=HTTP_400_BAD_REQUEST)
 
         recipient = data["recipient"]
         for field in ["name", "phone", "address"]:
             if field not in recipient or not recipient[field]:
-                return CustomResponse(code=3400, msg=f"收件人信息缺失: {field}", errors={field: "required"}, status=HTTP_400_BAD_REQUEST)
+                return CustomResponse(code=Codes.CART_OR_ORDER_PARAM_ERROR, msg=f"收件人信息缺失: {field}", errors={field: "required"}, status=HTTP_400_BAD_REQUEST)
 
         remark = data.get("remark", "")
         user_id = 9  # 开发阶段写死，TODO: 从认证上下文获取
@@ -86,7 +88,7 @@ class DirectOrderCreateAPIView(APIView):
         try:
             order = create_order_direct(user_id=user_id, product_id=product_id, quantity=quantity, recipient=recipient, remark=remark)
         except ValueError as e:
-            return CustomResponse(code=3401, msg="订单创建失败", errors={"detail": str(e)}, status=HTTP_400_BAD_REQUEST)
+            return CustomResponse(code=Codes.ORDER_CREATE_FAILED, msg="订单创建失败", errors={"detail": str(e)}, status=HTTP_400_BAD_REQUEST)
 
         serialized = OrderInfoSerializer(order)
-        return CustomResponse(code=3000, msg="订单创建成功", data=serialized.data, status=HTTP_201_CREATED)
+        return CustomResponse(code=Codes.ORDER_CREATE_OK_ALIAS, msg="订单创建成功", data=serialized.data, status=HTTP_201_CREATED)

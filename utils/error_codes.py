@@ -1,0 +1,77 @@
+"""集中管理业务响应码。
+
+设计原则：
+- code=0 保留为通用成功（当前仍兼容模块级成功码）
+- 现有旧码保留（不破坏前端），统一在此定义，后续可逐步收敛到 0 成功 / 非 0 错误方案。
+- 采用语义常量，避免散落 magic number。
+
+迁移建议：
+1. 新代码一律引用常量，不再写裸数字。
+2. 前端逐步仅依赖是否为 0 判定成功；待全部替换后，旧的成功码可标记废弃。
+"""
+from __future__ import annotations
+from enum import IntEnum
+
+
+class Codes(IntEnum):
+    # 通用
+    SUCCESS = 0
+    INTERNAL_ERROR = 9000
+
+    # 分类 / 商品（沿用既有数字）
+    CATEGORY_MAIN_MENU_OK = 1000
+    CATEGORY_SUB_MENU_OK = 1001
+    CATEGORY_SUB_SUB_MENU_OK = 1002
+    CATEGORY_PARAM_ERROR = 1400
+
+    PRODUCT_TAG_LIST_OK = 2000
+    PRODUCT_DETAIL_OK = 2001
+    PRODUCT_NOT_FOUND_OR_PARAM_ERROR = 2400
+
+    # 购物车 / 订单（沿用）
+    CART_LIST_OK = 3000
+    CART_ADD_OR_UPDATE_OK = 3001
+    CART_ITEM_REMOVED = 3002
+    ORDER_CREATE_OK_ALIAS = 3000  # 兼容：之前订单成功也用 3000
+    CART_OR_ORDER_PARAM_ERROR = 3400
+    ORDER_CREATE_FAILED = 3401
+
+    # 用户 / 认证（沿用 + 补充）
+    USER_ACTION_OK = 4000
+    USER_PARAM_INVALID = 4400
+    LOGIN_PHONE_EMPTY = 4401
+    LOGIN_PASSWORD_EMPTY = 4402
+    LOGIN_PHONE_NOT_REGISTERED = 4403
+    USER_NOT_FOUND = 4404  # 新增：查询 “用户不存在”
+    LOGIN_USER_DISABLED = 4405
+    LOGIN_CREDENTIALS_INVALID = 4406
+    USER_UPDATE_FAILED = 4407
+
+    # 评论（新增建议区间 5xxx）
+    REVIEW_LIST_OK = 5000
+    REVIEW_CREATED = 5001
+    REVIEW_UPDATED = 5002
+    REVIEW_DELETED = 5003
+    REVIEW_PARAM_ERROR = 5400
+    REVIEW_NOT_FOUND = 5404
+
+
+# 兼容别名（可选）
+ALIAS = {
+    1000: Codes.CATEGORY_MAIN_MENU_OK,
+    1001: Codes.CATEGORY_SUB_MENU_OK,
+    1002: Codes.CATEGORY_SUB_SUB_MENU_OK,
+    1400: Codes.CATEGORY_PARAM_ERROR,
+    2000: Codes.PRODUCT_TAG_LIST_OK,
+    2001: Codes.PRODUCT_DETAIL_OK,
+    2400: Codes.PRODUCT_NOT_FOUND_OR_PARAM_ERROR,
+    3000: Codes.CART_LIST_OK,  # 或订单成功
+    3001: Codes.CART_ADD_OR_UPDATE_OK,
+    3002: Codes.CART_ITEM_REMOVED,
+    3400: Codes.CART_OR_ORDER_PARAM_ERROR,
+    3401: Codes.ORDER_CREATE_FAILED,
+    4000: Codes.USER_ACTION_OK,
+    4400: Codes.USER_PARAM_INVALID,
+}
+
+__all__ = ["Codes", "ALIAS"]

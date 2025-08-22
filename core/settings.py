@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     # Third-party apps
     "rest_framework",
     "corsheaders",
+    "drf_spectacular",  # Third-party API schema/doc
 
     # My apps
     "apps.product.apps.ProductConfig",
@@ -129,10 +130,50 @@ AUTH_PASSWORD_VALIDATORS = [
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "utils.jwt_auth.JWTHeaderAuthentication",
+        # 可选：支持 URL 查询参数 ?token= 认证
+        "utils.jwt_auth.JWTQueryParamAuthentication",
     ],
     "DEFAULT_RENDERER_CLASSES": [
         "utils.renderer.CustomJSONRenderer",
     ],
+    # OpenAPI 自动生成配置
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+# drf-spectacular 配置
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Cartit API",
+    "DESCRIPTION": "Cartit 项目 OpenAPI 文档。包含产品、用户、订单、购物车与评论模块。",
+    "VERSION": "1.0.0",
+    # 安全定义：与现有 JWT 方案保持一致
+    "SECURITY": [
+        {"TokenAuth": []},
+        {"TokenQuery": []},
+    ],
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SCHEMA_PATH_PREFIX": "/",
+    "SERVERS": [
+        {"url": "http://localhost:8000", "description": "本地开发"}
+    ],
+    "COMPONENTS": {
+        "securitySchemes": {
+            # 自定义请求头 Token: <jwt>
+            "TokenAuth": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "Token",
+                "description": "在请求头中携带 Token: <jwt> 完成认证",
+            },
+            # 备选：URL 查询参数 ?token=<jwt>
+            "TokenQuery": {
+                "type": "apiKey",
+                "in": "query",
+                "name": "token",
+                "description": "在查询参数中携带 token=<jwt> 完成认证",
+            },
+        }
+    },
 }
 
 # Internationalization

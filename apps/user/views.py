@@ -20,6 +20,7 @@ from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
 from django.contrib.auth.hashers import check_password, make_password
 from utils.jwt_auth import generate_token
+from utils.error_codes import Codes
 
 
 class UserRegisterAPIView(APIView):
@@ -31,10 +32,10 @@ class UserRegisterAPIView(APIView):
     def post(self, request: Request):
         user_serializer = UserRegisterSerializer(data=request.data)
         if not user_serializer.is_valid():
-            return CustomResponse(code=4400, msg='请求参数不合法', errors=user_serializer.errors, status=400)
+            return CustomResponse(code=Codes.USER_PARAM_INVALID, msg='请求参数不合法', errors=user_serializer.errors, status=400)
         user = user_serializer.save()
         user_data = UserMeSerializer(user)
-        return CustomResponse(code=4000, msg='用户操作成功', data=user_data.data, status=200)
+        return CustomResponse(code=Codes.USER_ACTION_OK, msg='用户操作成功', data=user_data.data, status=200)
 
 
 class UserLoginAPIView(GenericAPIView):
@@ -47,24 +48,24 @@ class UserLoginAPIView(GenericAPIView):
         phone = request.data.get("phone")
         password = request.data.get("password")
         if not phone:
-            return CustomResponse(code=4401, msg="手机号不能为空", status=400)
+            return CustomResponse(code=Codes.LOGIN_PHONE_EMPTY, msg="手机号不能为空", status=400)
         if not password:
-            return CustomResponse(code=4402, msg="密码不能为空", status=400)
+            return CustomResponse(code=Codes.LOGIN_PASSWORD_EMPTY, msg="密码不能为空", status=400)
 
         try:
             user = User.objects.get(phone=phone, is_deleted=False)
         except ObjectDoesNotExist:
-            return CustomResponse(code=4403, msg="该手机号未注册", status=400)
+            return CustomResponse(code=Codes.LOGIN_PHONE_NOT_REGISTERED, msg="该手机号未注册", status=400)
 
         if user.status != 'active':
-            return CustomResponse(code=4405, msg="账户已禁用", status=403)
+            return CustomResponse(code=Codes.LOGIN_USER_DISABLED, msg="账户已禁用", status=403)
 
         if not check_password(password, user.password):
-            return CustomResponse(code=4406, msg="手机号或密码错误", status=400)
+            return CustomResponse(code=Codes.LOGIN_CREDENTIALS_INVALID, msg="手机号或密码错误", status=400)
 
         token = generate_token(user_id=user.id, username=user.username)
         user_serializer = UserMeSerializer(instance=user)
-        return CustomResponse(code=4000, msg="登录成功", data={"token": token, "user": user_serializer.data}, status=200)
+        return CustomResponse(code=Codes.USER_ACTION_OK, msg="登录成功", data={"token": token, "user": user_serializer.data}, status=200)
 
 
 class UserLogoutAPIView(APIView):
@@ -74,7 +75,7 @@ class UserLogoutAPIView(APIView):
     方法：POST
     """
     def post(self, request: Request):
-        return CustomResponse(code=4000, msg="登出成功", data=None, status=200)
+        return CustomResponse(code=Codes.USER_ACTION_OK, msg="登出成功", data=None, status=200)
 
 
 class UserUpdateAPIView(APIView):
@@ -86,7 +87,7 @@ class UserUpdateAPIView(APIView):
     def put(self, request: Request):
         user_id = request.data.get("id")
         if not user_id:
-            return CustomResponse(code=4400, msg="缺少用户ID", errors={"id": "必填"}, status=400)
+            return CustomResponse(code=Codes.USER_PARAM_INVALID, msg="缺少用户ID", errors={"id": "必填"}, status=400)
 
         user = get_object_or_404(User, pk=user_id, is_deleted=False)
 
@@ -103,9 +104,9 @@ class UserUpdateAPIView(APIView):
         try:
             user.save()
         except IntegrityError as e:
-            return CustomResponse(code=4407, msg="用户信息更新失败", errors={"detail": str(e)}, status=400)
+            return CustomResponse(code=Codes.USER_UPDATE_FAILED, msg="用户信息更新失败", errors={"detail": str(e)}, status=400)
 
-        return CustomResponse(code=4000, msg="用户信息更新成功", data=UserMeSerializer(user).data, status=200)
+        return CustomResponse(code=Codes.USER_ACTION_OK, msg="用户信息更新成功", data=UserMeSerializer(user).data, status=200)
 
 
 class UserDeleteAPIView(APIView):
@@ -117,13 +118,13 @@ class UserDeleteAPIView(APIView):
     def delete(self, request: Request):
         user_id = request.query_params.get("id") or request.data.get("id")
         if not user_id:
-            return CustomResponse(code=4400, msg="缺少用户ID", errors={"id": "必填"}, status=400)
+            return CustomResponse(code=Codes.USER_PARAM_INVALID, msg="缺少用户ID", errors={"id": "必填"}, status=400)
 
         user = get_object_or_404(User, pk=user_id, is_deleted=False)
         user.is_deleted = True
         user.status = 'disabled'
         user.save(update_fields=["is_deleted", "status"])
-        return CustomResponse(code=4000, msg="用户已注销", data=None, status=200)
+        return CustomResponse(code=Codes.USER_ACTION_OK, msg="用户已注销", data=None, status=200)
 
 
 class UserMeAPIView(APIView):
@@ -143,7 +144,7 @@ class UserMeAPIView(APIView):
 
         if not query_me:
             return CustomResponse(
-                code=4400,
+                code=Codes.USER_PARAM_INVALID,
                 msg='缺少查询参数',
                 errors={'detail': '请提供 username, email 或 phone 之一'},
                 status=400)
@@ -151,20 +152,37 @@ class UserMeAPIView(APIView):
         me_data = User.objects.filter(**query_me, is_deleted=False)
         if not me_data.exists():
             return CustomResponse(
-                code=4404,
+                code=Codes.USER_NOT_FOUND,
                 msg='用户不存在',
                 errors={'detail': '未找到匹配的用户'},
                 status=404)
         me_data = me_data.first()
         me_serializer = UserMeSerializer(me_data)
-        return CustomResponse(code=4000, msg='获取用户信息成功', data=me_serializer.data, status=200)
+        return CustomResponse(code=Codes.USER_ACTION_OK, msg='获取用户信息成功', data=me_serializer.data, status=200)
 
 
-class UserAddressAPIView(GenericAPIView, CreateModelMixin, RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin):
-    """用户地址的创建/查询/更新/删除。
+class UserAddressCreateAPIView(GenericAPIView, CreateModelMixin):
+    """创建用户地址。
 
     路由：
-      - POST   /user/address/
+      - POST /user/address/
+    """
+
+    queryset = UserAddress.objects.all()
+    serializer_class = UserAddressSerializer
+
+    def post(self, request: Request):
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            return CustomResponse(code=Codes.USER_PARAM_INVALID, msg='请求参数不合法', errors=serializer.errors, status=400)
+        instance = serializer.save()
+        return CustomResponse(code=Codes.USER_ACTION_OK, msg='创建地址成功', data=self.get_serializer(instance).data, status=200)
+
+
+class UserAddressDetailAPIView(GenericAPIView, RetrieveModelMixin, UpdateModelMixin, DestroyModelMixin):
+    """用户地址详情的查询/更新/删除。
+
+    路由：
       - GET    /user/address/<pk>/
       - PUT    /user/address/<pk>/
       - DELETE /user/address/<pk>/
@@ -173,41 +191,29 @@ class UserAddressAPIView(GenericAPIView, CreateModelMixin, RetrieveModelMixin, U
     queryset = UserAddress.objects.all()
     serializer_class = UserAddressSerializer
 
-    def post(self, request: Request):
-        """创建地址。"""
-        serializer = self.get_serializer(data=request.data)
-        if not serializer.is_valid():
-            return CustomResponse(code=4400, msg='请求参数不合法', errors=serializer.errors, status=400)
-        instance = serializer.save()
-        return CustomResponse(code=4000, msg='创建地址成功', data=self.get_serializer(instance).data, status=200)
-
-    def get(self, request: Request, pk):
-        """获取地址详情。"""
+    def get(self, request: Request, pk: int):
         instance = get_object_or_404(UserAddress, pk=pk, is_deleted=False)
-        return CustomResponse(code=4000, msg='获取地址成功', data=self.get_serializer(instance).data, status=200)
+        return CustomResponse(code=Codes.USER_ACTION_OK, msg='获取地址成功', data=self.get_serializer(instance).data, status=200)
 
-    def put(self, request: Request, pk):
-        """更新地址信息（部分字段可选）。"""
+    def put(self, request: Request, pk: int):
         instance = get_object_or_404(UserAddress, pk=pk, is_deleted=False)
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         if not serializer.is_valid():
-            return CustomResponse(code=4400, msg='请求参数不合法', errors=serializer.errors, status=400)
+            return CustomResponse(code=Codes.USER_PARAM_INVALID, msg='请求参数不合法', errors=serializer.errors, status=400)
         instance = serializer.save()
-        return CustomResponse(code=4000, msg='更新地址成功', data=self.get_serializer(instance).data, status=200)
+        return CustomResponse(code=Codes.USER_ACTION_OK, msg='更新地址成功', data=self.get_serializer(instance).data, status=200)
 
-    def delete(self, request: Request, pk):
-        """软删除地址（is_deleted=True）。"""
+    def delete(self, request: Request, pk: int):
         instance = get_object_or_404(UserAddress, pk=pk, is_deleted=False)
         instance.is_deleted = True
         instance.save(update_fields=["is_deleted"])
-        return CustomResponse(code=4000, msg='删除地址成功', data=None, status=200)
+        return CustomResponse(code=Codes.USER_ACTION_OK, msg='删除地址成功', data=None, status=200)
 
 
 class UserAddressListAPIView(GenericAPIView, ListModelMixin):
     """获取用户地址列表（支持按 user 或 user_id 过滤）。"""
 
     serializer_class = UserAddressSerializer
-    # permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         qs = UserAddress.objects.filter(is_deleted=False)
@@ -218,7 +224,6 @@ class UserAddressListAPIView(GenericAPIView, ListModelMixin):
         return qs
 
     def get(self, request: Request):
-        """获取地址列表。"""
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
-        return CustomResponse(code=4000, msg='获取地址列表成功', data=serializer.data, status=200)
+        return CustomResponse(code=Codes.USER_ACTION_OK, msg='获取地址列表成功', data=serializer.data, status=200)
