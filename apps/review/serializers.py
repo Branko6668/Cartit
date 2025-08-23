@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.conf import settings
 from .models import ProductReview
 import json
 
@@ -38,6 +39,9 @@ class ImagesField(serializers.Field):
 
 class ProductReviewSerializer(serializers.ModelSerializer):
     images = ImagesField(required=False, allow_null=True)
+    user_id = serializers.IntegerField(source='user.id', read_only=True)
+    user_username = serializers.CharField(source='user.username', read_only=True)
+    user_avatar_url = serializers.SerializerMethodField()
 
     class Meta:
         model = ProductReview
@@ -49,6 +53,17 @@ class ProductReviewSerializer(serializers.ModelSerializer):
             'product': {'read_only': True},
             'store': {'read_only': True},
         }
+
+    def _add_prefix(self, path: str | None):
+        if not path:
+            return path
+        if path.startswith('http://') or path.startswith('https://'):
+            return path
+        base = getattr(settings, 'IMAGE_URL', '') or ''
+        return base.rstrip('/') + '/' + path.lstrip('/')
+
+    def get_user_avatar_url(self, obj: ProductReview):
+        return self._add_prefix(getattr(obj.user, 'avatar_url', None))
 
     def validate(self, attrs):
         order_item = attrs.get('order_item')

@@ -14,6 +14,8 @@ from apps.product.serializers import ProductSerializer
 from utils.renderer import CustomResponse
 from rest_framework.generics import ListAPIView
 from utils.error_codes import Codes
+from django.db.models import Count, Q
+from django.conf import settings
 
 
 class ProductMainMenuView(APIView):
@@ -122,3 +124,103 @@ class ProductQueryAPIView(APIView):
 
         result = ProductSerializer(instance=product_data).data
         return CustomResponse(code=Codes.PRODUCT_DETAIL_OK, msg="获取商品详情成功", data=result, status=200)
+
+
+class ProductSearchAPIView(APIView):
+    """商品搜索接口
+
+    GET /product/search/?q=关键词&page=1&sort=0&page_size=20
+    参数：
+      q: 搜索关键词（必填，对 name / subtitle / description 模糊匹配）
+      page: 页码（>=1，默认1）
+      page_size: 每页数量（默认20，最大100）
+      sort: 排序方式
+            0=默认(按 id desc)
+            1=价格升序
+            2=价格降序
+            3=评论数升序
+            4=评论数降序
+    返回：分页结果 + 商品核心信息
+    """
+
+    def get(self, request):
+        q = request.query_params.get('q', '').strip()
+        if not q:
+            return CustomResponse(code=Codes.CATEGORY_PARAM_ERROR, msg='缺少搜索关键词 q', errors={'q': 'required'}, status=400)
+
+        # 解析分页
+        try:
+            page = int(request.query_params.get('page', 1))
+        except ValueError:
+            return CustomResponse(code=Codes.CATEGORY_PARAM_ERROR, msg='page 必须为整数', errors={'page': 'invalid'}, status=400)
+        if page < 1:
+            return CustomResponse(code=Codes.CATEGORY_PARAM_ERROR, msg='page 不能小于 1', errors={'page': 'invalid'}, status=400)
+
+        try:
+            page_size = int(request.query_params.get('page_size', 20))
+        except ValueError:
+            return CustomResponse(code=Codes.CATEGORY_PARAM_ERROR, msg='page_size 必须为整数', errors={'page_size': 'invalid'}, status=400)
+        if page_size <= 0:
+            page_size = 20
+        if page_size > 100:
+            page_size = 100
+
+        # 排序
+        try:
+            sort = int(request.query_params.get('sort', 0))
+        except ValueError:
+            return CustomResponse(code=Codes.CATEGORY_PARAM_ERROR, msg='sort 必须为 0/1/2/3/4', errors={'sort': 'invalid'}, status=400)
+        if sort not in (0, 1, 2, 3, 4):
+            return CustomResponse(code=Codes.CATEGORY_PARAM_ERROR, msg='sort 仅支持 0/1/2/3/4', errors={'sort': 'invalid'}, status=400)
+
+        queryset = (Product.objects
+                    .filter(is_deleted=False)
+                    .filter(Q(name__icontains=q) | Q(subtitle__icontains=q) | Q(description__icontains=q))
+                    .select_related('store')
+                    .annotate(review_count=Count('productreview', filter=Q(productreview__is_deleted=False)))
+                    )
+
+        # 应用排序
+        if sort == 1:          # 价格升序
+            queryset = queryset.order_by('price', '-id')
+        elif sort == 2:        # 价格降序
+            queryset = queryset.order_by('-price', '-id')
+        elif sort == 3:        # 评论数升序
+            queryset = queryset.order_by('review_count', '-id')
+        elif sort == 4:        # 评论数降序
+            queryset = queryset.order_by('-review_count', '-id')
+        else:                  # 默认：新->旧
+            queryset = queryset.order_by('-id')
+
+        paginator = Paginator(queryset, page_size)
+        try:
+            page_obj = paginator.get_page(page)
+        except Exception:
+            return CustomResponse(code=Codes.PRODUCT_NOT_FOUND_OR_PARAM_ERROR, msg='页码超出范围', errors={'page': 'out_of_range'}, status=404)
+
+        results = [
+            {
+                'id': p.id,
+                'name': p.name,
+                'price': str(p.price),
+                'thumbnail': (settings.IMAGE_URL.rstrip('/') + '/' + p.thumbnail.lstrip('/')) if p.thumbnail and not (p.thumbnail.startswith('http://') or p.thumbnail.startswith('https://')) else p.thumbnail,
+                'review_count': p.review_count,
+                'store_id': p.store_id,
+                'store_name': getattr(p.store, 'store_name', None)
+            }
+            for p in page_obj.object_list
+        ]
+
+        data = {
+            'q': q,
+            'sort': sort,
+            'page': page_obj.number,
+            'page_size': page_size,
+            'total': paginator.count,
+            'total_pages': paginator.num_pages,
+            'has_next': page_obj.has_next(),
+            'has_prev': page_obj.has_previous(),
+            'current_count': len(results),
+            'results': results
+        }
+        return CustomResponse(code=Codes.PRODUCT_SEARCH_OK, msg='搜索成功', data=data, status=200)
