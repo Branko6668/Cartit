@@ -9,6 +9,8 @@ from .views import (
     UserAddressCreateAPIView,
     UserAddressDetailAPIView,
     UserAddressListAPIView,
+    UserSendCodeAPIView,
+    UserResetPasswordAPIView,
 )
 
 
@@ -19,6 +21,8 @@ urlpatterns = [
     path("update/", UserUpdateAPIView.as_view(), name="user_update"),
     path("delete/", UserDeleteAPIView.as_view(), name="user_delete"),
     path("me/", UserMeAPIView.as_view(), name="user_me"),
+    path("send_code/", UserSendCodeAPIView.as_view(), name="user_send_code"),
+    path("reset_password/", UserResetPasswordAPIView.as_view(), name="user_reset_password"),
 
     # 地址：创建/详情/列表
     path("address/", UserAddressCreateAPIView.as_view(), name="user_address_create"),  # POST only

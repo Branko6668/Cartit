@@ -21,6 +21,8 @@ from django.db import IntegrityError
 from django.contrib.auth.hashers import check_password, make_password
 from utils.jwt_auth import generate_token
 from utils.error_codes import Codes
+from django.core.cache import cache
+import re, random, logging
 
 
 class UserRegisterAPIView(APIView):
@@ -28,14 +30,31 @@ class UserRegisterAPIView(APIView):
     用户注册 API 视图
     路由：/user/register/
     方法：POST
+    需要字段：phone, password, code (+ 可选 username/email/avatar_url 等)
     """
     def post(self, request: Request):
+        phone = request.data.get('phone', '').strip()
+        code = request.data.get('code', '').strip()
+        if not phone:
+            return CustomResponse(code=Codes.USER_PARAM_INVALID, msg='手机号不能为空', errors={'phone': 'required'}, status=400)
+        if not code:
+            return CustomResponse(code=Codes.VERIFICATION_CODE_INVALID, msg='验证码不能为空', errors={'code': 'required'}, status=400)
+        # 校验验证码
+        code_key = f'vc:code:{phone}'
+        stored = cache.get(code_key)
+        if stored is None:
+            return CustomResponse(code=Codes.VERIFICATION_CODE_EXPIRED, msg='验证码已失效', status=400)
+        if stored != code:
+            return CustomResponse(code=Codes.VERIFICATION_CODE_INVALID, msg='验证码错误', status=400)
+
         user_serializer = UserRegisterSerializer(data=request.data)
         if not user_serializer.is_valid():
             return CustomResponse(code=Codes.USER_PARAM_INVALID, msg='请求参数不合法', errors=user_serializer.errors, status=400)
         user = user_serializer.save()
+        # 使用后失效验证码
+        cache.delete(code_key)
         user_data = UserMeSerializer(user)
-        return CustomResponse(code=Codes.USER_ACTION_OK, msg='用户操作成功', data=user_data.data, status=200)
+        return CustomResponse(code=Codes.USER_ACTION_OK, msg='用户注册成功', data=user_data.data, status=200)
 
 
 class UserLoginAPIView(GenericAPIView):
@@ -227,3 +246,60 @@ class UserAddressListAPIView(GenericAPIView, ListModelMixin):
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         return CustomResponse(code=Codes.USER_ACTION_OK, msg='获取地址列表成功', data=serializer.data, status=200)
+
+
+class UserSendCodeAPIView(APIView):
+    """发送手机验证码（本地调试：直接打印在控制台）
+    路由：POST /user/send_code/
+    请求：{"phone": "13800000000", "scene": "register|login|reset"}
+    节流：同一手机号 60s 只能发送一次；验证码有效期 5 分钟
+    """
+    def post(self, request: Request):
+        phone = request.data.get('phone', '').strip()
+        scene = (request.data.get('scene') or 'login').strip()
+        if not phone:
+            return CustomResponse(code=Codes.USER_PARAM_INVALID, msg='手机号不能为空', errors={'phone': 'required'}, status=400)
+        if not re.fullmatch(r'^1\d{10}$', phone):
+            return CustomResponse(code=Codes.USER_PARAM_INVALID, msg='手机号格式不正确', errors={'phone': 'invalid'}, status=400)
+        throttle_key = f'vc:ttl:{phone}'
+        if cache.get(throttle_key):
+            return CustomResponse(code=Codes.VERIFICATION_CODE_THROTTLED, msg='发送过于频繁，请稍后再试', status=429)
+        code_key = f'vc:code:{phone}'
+        code = f"{random.randint(100000, 999999)}"
+        cache.set(code_key, code, 300)        # 验证码 5 分钟有效
+        cache.set(throttle_key, 1, 60)        # 60 秒节流
+        logging.getLogger(__name__).info(f"[VCODE] phone={phone} scene={scene} code={code}")
+        print(f"[DEBUG VCODE] {phone} -> {code}")
+        return CustomResponse(code=Codes.VERIFICATION_CODE_SENT, msg='验证码已发送', data={'phone': phone[:-4] + '****', 'scene': scene}, status=200)
+
+
+class UserResetPasswordAPIView(APIView):
+    """重置密码接口
+    路由：POST /user/reset_password/
+    请求：{"phone": "13800000000", "code": "123456", "new_password": "Passw0rd!"}
+    说明：本地环境验证码通过控制台查看；成功后旧验证码失效
+    """
+    def post(self, request: Request):
+        phone = request.data.get('phone', '').strip()
+        code = request.data.get('code', '').strip()
+        new_password = request.data.get('new_password')
+        if not (phone and code and new_password):
+            return CustomResponse(code=Codes.USER_PARAM_INVALID, msg='缺少必要字段', errors={'phone': 'required', 'code': 'required', 'new_password': 'required'}, status=400)
+        if not re.fullmatch(r'^1\d{10}$', phone):
+            return CustomResponse(code=Codes.USER_PARAM_INVALID, msg='手机号格式不正确', errors={'phone': 'invalid'}, status=400)
+        if len(new_password) < 6:
+            return CustomResponse(code=Codes.USER_PARAM_INVALID, msg='密码至少 6 位', errors={'new_password': 'too_short'}, status=400)
+        code_key = f'vc:code:{phone}'
+        stored = cache.get(code_key)
+        if stored is None:
+            return CustomResponse(code=Codes.VERIFICATION_CODE_EXPIRED, msg='验证码已失效', status=400)
+        if stored != code:
+            return CustomResponse(code=Codes.VERIFICATION_CODE_INVALID, msg='验证码错误', status=400)
+        try:
+            user = User.objects.get(phone=phone, is_deleted=False)
+        except User.DoesNotExist:
+            return CustomResponse(code=Codes.PASSWORD_RESET_PHONE_NOT_FOUND, msg='手机号未注册', status=404)
+        user.password = make_password(new_password)
+        user.save(update_fields=['password'])
+        cache.delete(code_key)
+        return CustomResponse(code=Codes.PASSWORD_RESET_OK, msg='密码重置成功', data={'user_id': user.id}, status=200)

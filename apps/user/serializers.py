@@ -2,6 +2,7 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 from apps.user.models import User, UserAddress
 from django.contrib.auth.hashers import make_password
+import re
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):
@@ -26,6 +27,18 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)  # 会覆盖 extra_kwargs 的设置
     birthday = serializers.DateField(format="%Y-%m-%d",required=False)
     avatar_url = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_phone(self, value):
+        if not re.fullmatch(r'^1\d{10}$', value):
+            raise serializers.ValidationError("手机号格式不正确")
+        return value
+
+    def validate_password(self, value):
+        if len(value) < 6:
+            raise serializers.ValidationError("密码至少6位")
+        if not re.search(r'[A-Za-z]', value) or not re.search(r'\d', value):
+            raise serializers.ValidationError("密码需包含字母和数字")
+        return value
 
     def create(self, validated_data):
         # print("create方法被调用")

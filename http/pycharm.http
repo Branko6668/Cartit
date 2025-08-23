@@ -1,20 +1,57 @@
 # PyCharm HTTP Client requests
-# 使用方法：在 PyCharm 右上角选择环境 dev（来自 http-client.env.json），然后逐个发送请求。
-# 认证：当前后端未强制校验，可保留现有 Token 头；后续接入 JWT 时推荐使用：
-# Authorization: Bearer {{token}}
-# 下面示例仍使用 Token: {{token}} 以保持一致。
+# 使用方法：选择环境 dev（http-client.env.json），按段发送。
+# 认证：当前未强制，需要时在请求头加 Token: {{token}} 或 Authorization: Bearer {{token}}
+# 验证码：本地调试在控制台日志打印 [DEBUG VCODE]
 
-### User - Register
+########## 用户 / 验证码 & 账号 ##########
+
+### User - Send Code (register)
+POST {{base_url}}/user/send_code/
+Content-Type: application/json
+
+{
+  "phone": "13800000000",
+  "scene": "register"
+}
+
+### User - Send Code (reset password)
+POST {{base_url}}/user/send_code/
+Content-Type: application/json
+
+{
+  "phone": "13800000000",
+  "scene": "reset"
+}
+
+### User - Send Code (throttle expect 4501)
+POST {{base_url}}/user/send_code/
+Content-Type: application/json
+
+{
+  "phone": "13800000000",
+  "scene": "register"
+}
+
+### User - Register (需要先手动从控制台获取正确验证码填入 code)
 POST {{base_url}}/user/register/
 Content-Type: application/json
 
 {
+  "phone": "13800000000",
+  "password": "Abc123",
+  "code": "123456",
   "username": "tom",
-  "phone": "13800000001",
-  "email": "tom@example.com",
-  "password": "Passw0rd!",
-  "birthday": "1990-01-01",
-  "avatar_url": "/static/user_avatar_images/01.png"
+  "avatar_url": "user_avatar_images/01.png"
+}
+
+### User - Register (验证码错误示例，期望 4502)
+POST {{base_url}}/user/register/
+Content-Type: application/json
+
+{
+  "phone": "13800000000",
+  "password": "Abc123",
+  "code": "000000"
 }
 
 ### User - Login (sets global token)
@@ -22,16 +59,14 @@ POST {{base_url}}/user/login/
 Content-Type: application/json
 
 {
-  "phone": "13733715212",
-  "password": "200249"
+  "phone": "13800000000",
+  "password": "Abc123"
 }
 
 > {%
   const body = JSON.parse(response.body || '{}');
   const token = body?.data?.token || body?.token;
-  if (token) {
-    client.global.set("token", token);
-  }
+  if (token) { client.global.set("token", token); }
 %}
 
 ### User - Login (fail wrong password)
@@ -39,16 +74,26 @@ POST {{base_url}}/user/login/
 Content-Type: application/json
 
 {
-  "phone": "13733715212",
+  "phone": "13800000000",
   "password": "WRONG_PASS"
+}
+
+### User - Reset Password (先获取验证码 scene=reset)
+POST {{base_url}}/user/reset_password/
+Content-Type: application/json
+
+{
+  "phone": "13800000000",
+  "code": "123456",
+  "new_password": "NewAbc123"
 }
 
 ### User - Logout
 POST {{base_url}}/user/logout/
 Token: {{token}}
 
-### User - Me (by username)
-GET {{base_url}}/user/me/?username=tom
+### User - Me (by phone)
+GET {{base_url}}/user/me/?phone=13800000000
 Token: {{token}}
 
 ### User - Me (missing param error)
@@ -63,12 +108,14 @@ Token: {{token}}
 {
   "id": 9,
   "username": "tom_new",
-  "avatar_url": "/static/user_avatar_images/02.png"
+  "avatar_url": "user_avatar_images/02.png"
 }
 
 ### User - Delete (soft)
 DELETE {{base_url}}/user/delete/?id=9
 Token: {{token}}
+
+########## 地址管理 ##########
 
 ### Address - Create
 POST {{base_url}}/user/address/
@@ -87,7 +134,7 @@ Token: {{token}}
   "is_default": false
 }
 
-### Address - Get detail
+### Address - Detail
 GET {{base_url}}/user/address/1/
 Token: {{token}}
 
@@ -109,9 +156,7 @@ Token: {{token}}
 GET {{base_url}}/user/address/list/?user=9
 Token: {{token}}
 
-### Address - List (by user_id alias)
-GET {{base_url}}/user/address/list/?user_id=9
-Token: {{token}}
+########## 商品分类 & 标签 ##########
 
 ### Product - Main menu
 GET {{base_url}}/product/main_menu/
@@ -131,8 +176,30 @@ GET {{base_url}}/product/query/1001/
 ### Product - Query detail (invalid id error)
 GET {{base_url}}/product/query/abc/
 
+########## 商品搜索（sort: 0默认 1价升 2价降 3评升 4评降） ##########
+
+### Product - Search (default sort 0)
+GET {{base_url}}/product/search/?q=蓝&page=1&page_size=10&sort=0
+
+### Product - Search (price asc 1)
+GET {{base_url}}/product/search/?q=蓝&page=1&sort=1
+
+### Product - Search (price desc 2)
+GET {{base_url}}/product/search/?q=蓝&page=1&sort=2
+
+### Product - Search (review count asc 3)
+GET {{base_url}}/product/search/?q=蓝&page=1&sort=3
+
+### Product - Search (review count desc 4)
+GET {{base_url}}/product/search/?q=0375&page=1&sort=4
+
+### Product - Search (missing q error)
+GET {{base_url}}/product/search/?page=1
+
+########## 购物车 ##########
+
 ### Shopping Cart - Get by user
-GET {{base_url}}/shopping_cart/?user_id=9
+GET {{base_url}}/shopping_cart/?user_id=1
 Token: {{token}}
 
 ### Shopping Cart - Add or update
@@ -156,6 +223,8 @@ Token: {{token}}
   "product_id": 1001,
   "quantity": -999
 }
+
+########## 订单 ##########
 
 ### Order - Create from cart
 POST {{base_url}}/order/create/
@@ -186,6 +255,8 @@ Token: {{token}}
   },
   "remark": "礼品包装"
 }
+
+########## 评论（返回含用户信息与头像URL） ##########
 
 ### Review - List
 GET {{base_url}}/review/?page=1&page_size=10
@@ -236,10 +307,12 @@ Token: {{token}}
 GET {{base_url}}/review/user/9/?page=1&page_size=10
 
 ### Review - Query by product
-GET {{base_url}}/review/product/1001/?page=1&page_size=10
+GET {{base_url}}/review/product/3/?page=1&page_size=10
 
 ### Review - Query by store
 GET {{base_url}}/review/store/5/?page=1&page_size=10
+
+########## OpenAPI 文档 ##########
 
 ### OpenAPI - Schema (JSON)
 GET {{base_url}}/api/schema/

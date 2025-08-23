@@ -41,7 +41,7 @@ def generate_token(user_id: int, username: Optional[str] = None, days: int = 7, 
     payload: Dict = {
         "user_id": user_id,
         "username": username or "",
-        "exp": datetime.now(UTC) + timedelta(days=days),
+        "exp": datetime.now(UTC) + timedelta(seconds=days),
     }
     if extra:
         payload.update(extra)
