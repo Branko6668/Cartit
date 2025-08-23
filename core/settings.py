@@ -59,6 +59,16 @@ INSTALLED_APPS = [
 CORS_ORIGIN_ALLOW_ALL = True
 # 允许携带cookie
 CORS_ALLOW_CREDENTIALS = True
+# 显式允许自定义头（前端 Token 头/Authorization）
+CORS_ALLOW_HEADERS = [
+    'accept', 'accept-encoding', 'authorization', 'content-type', 'dnt', 'origin', 'user-agent', 'x-csrftoken', 'x-requested-with',
+    'token', 'Token', 'Authorization'
+]
+CORS_ALLOW_METHODS = [
+    'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'
+]
+# 可选暴露头（若前端需要读取）
+CORS_EXPOSE_HEADERS = ['Token', 'Authorization']
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

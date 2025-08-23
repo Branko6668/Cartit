@@ -1,6 +1,6 @@
 # PyCharm HTTP Client requests
 # 使用方法：选择环境 dev（http-client.env.json），按段发送。
-# 认证：当前未强制，需要时在请求头加 Token: {{token}} 或 Authorization: Bearer {{token}}
+# 认证：所有需要鉴权的接口在请求头加 Token: {{token}} （或 Authorization: Bearer {{token}}）
 # 验证码：本地调试在控制台日志打印 [DEBUG VCODE]
 
 ########## 用户 / 验证码 & 账号 ##########
@@ -196,33 +196,98 @@ GET {{base_url}}/product/search/?q=0375&page=1&sort=4
 ### Product - Search (missing q error)
 GET {{base_url}}/product/search/?page=1
 
-########## 购物车 ##########
+########## 购物车（新版 Token 驱动） ##########
 
-### Shopping Cart - Get by user
-GET {{base_url}}/shopping_cart/?user_id=1
+### Shopping Cart - List (含 summary)
+GET {{base_url}}/shopping_cart/
 Token: {{token}}
 
-### Shopping Cart - Add or update
+### Shopping Cart - Add (mode=add 默认)
 POST {{base_url}}/shopping_cart/
 Content-Type: application/json
 Token: {{token}}
 
 {
-  "user_id": 9,
   "product_id": 1001,
-  "quantity": 2
+  "quantity": 1
 }
 
-### Shopping Cart - Negative quantity error
+### Shopping Cart - Set quantity (mode=set)
 POST {{base_url}}/shopping_cart/
 Content-Type: application/json
 Token: {{token}}
 
 {
-  "user_id": 9,
   "product_id": 1001,
-  "quantity": -999
+  "quantity": 5,
+  "mode": "set"
 }
+
+### Shopping Cart - Invalid quantity (expect 3400)
+POST {{base_url}}/shopping_cart/
+Content-Type: application/json
+Token: {{token}}
+
+{
+  "product_id": 1001,
+  "quantity": -5
+}
+
+### Shopping Cart - Update item quantity (PATCH)
+PATCH {{base_url}}/shopping_cart/item/12/
+Content-Type: application/json
+Token: {{token}}
+
+{
+  "quantity": 3
+}
+
+### Shopping Cart - Update item selected (PATCH)
+PATCH {{base_url}}/shopping_cart/item/12/
+Content-Type: application/json
+Token: {{token}}
+
+{
+  "selected": false
+}
+
+### Shopping Cart - Delete item
+DELETE {{base_url}}/shopping_cart/item/12/
+Token: {{token}}
+
+### Shopping Cart - Select all
+POST {{base_url}}/shopping_cart/select_all
+Content-Type: application/json
+Token: {{token}}
+
+{
+  "selected": true
+}
+
+### Shopping Cart - Unselect all
+POST {{base_url}}/shopping_cart/select_all
+Content-Type: application/json
+Token: {{token}}
+
+{
+  "selected": false
+}
+
+### Shopping Cart - Clear selected items
+POST {{base_url}}/shopping_cart/clear
+Content-Type: application/json
+Token: {{token}}
+
+{
+  "only_selected": true
+}
+
+### Shopping Cart - Clear all
+POST {{base_url}}/shopping_cart/clear
+Content-Type: application/json
+Token: {{token}}
+
+{}
 
 ########## 订单 ##########
 

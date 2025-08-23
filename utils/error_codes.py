@@ -36,6 +36,9 @@ class Codes(IntEnum):
     ORDER_CREATE_OK_ALIAS = 3000  # 兼容：之前订单成功也用 3000
     CART_OR_ORDER_PARAM_ERROR = 3400
     ORDER_CREATE_FAILED = 3401
+    CART_SET_OK = 3003  # 新增：设定数量成功
+    CART_CLEARED = 3004  # 新增：清空购物车成功
+    CART_BATCH_UPDATE_OK = 3005  # 新增：批量更新成功
 
     # 用户 / 认证（沿用 + 补充）
     USER_ACTION_OK = 4000
@@ -64,6 +67,13 @@ class Codes(IntEnum):
     REVIEW_PARAM_ERROR = 5400
     REVIEW_NOT_FOUND = 5404
 
+    # 新增错误码
+    STOCK_NOT_ENOUGH = 3402  # 库存不足
+    PRICE_CHANGED = 3403  # 价格变动（预留）
+    PRODUCT_OFF_SHELF = 3404  # 商品已下架
+    CART_PARTIAL_VALIDATE_FAILED = 3407  # 部分校验失败
+    UNAUTHORIZED = 4101  # 未登录
+
 
 # 兼容别名（可选）
 ALIAS = {
@@ -78,8 +88,15 @@ ALIAS = {
     3000: Codes.CART_LIST_OK,  # 或订单成功
     3001: Codes.CART_ADD_OR_UPDATE_OK,
     3002: Codes.CART_ITEM_REMOVED,
+    3003: Codes.CART_SET_OK,
+    3004: Codes.CART_CLEARED,
+    3005: Codes.CART_BATCH_UPDATE_OK,
     3400: Codes.CART_OR_ORDER_PARAM_ERROR,
     3401: Codes.ORDER_CREATE_FAILED,
+    3402: Codes.STOCK_NOT_ENOUGH,
+    3403: Codes.PRICE_CHANGED,
+    3404: Codes.PRODUCT_OFF_SHELF,
+    3407: Codes.CART_PARTIAL_VALIDATE_FAILED,
     4000: Codes.USER_ACTION_OK,
     4400: Codes.USER_PARAM_INVALID,
     4500: Codes.VERIFICATION_CODE_SENT,
@@ -87,6 +104,7 @@ ALIAS = {
     4502: Codes.VERIFICATION_CODE_INVALID,
     4503: Codes.VERIFICATION_CODE_EXPIRED,
     4504: Codes.PASSWORD_RESET_OK,
+    4101: Codes.UNAUTHORIZED,
 }
 
 __all__ = ["Codes", "ALIAS"]
