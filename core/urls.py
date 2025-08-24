@@ -27,7 +27,7 @@ urlpatterns = [
     path("user/", include("apps.user.urls")),
     path("order/", include("apps.order.urls")),
     path("review/", include("apps.review.urls")),
-
+    path("payment/", include("apps.payment.urls")),  # 新增支付
     # OpenAPI schema & docs
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),

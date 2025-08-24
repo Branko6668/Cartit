@@ -252,6 +252,18 @@ SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=False, cast=bool
 SESSION_COOKIE_HTTPONLY = config('SESSION_COOKIE_HTTPONLY', default=True, cast=bool)
 SESSION_COOKIE_AGE = config('SESSION_COOKIE_AGE', default=1209600, cast=int)
 
+# 支付宝沙箱配置
+# 加密算法RSA2
+ALIPAY_APPID = config('ALIPAY_APPID', default='')
+ALI_PUB_KEY_PATH =  os.path.join(BASE_DIR, "apps/payment/keys/alipay_key.pem")  # 支付宝公钥
+APP_PRIVATE_KEY_PATH = os.path.join(BASE_DIR, "apps/payment/keys/private_key.pem")  # 应用私钥
+# 异步接收通知地址（需公网可访问），即支付宝支付成功后通知商户服务器的地址
+ALIPAY_NOTIFY_URL = 'http://localhost:8000/payment/alipay/notify/'
+# 同步跳转地址（可选），即支付完成后跳转回商户网站的地址
+ALIPAY_RETURN_URL = 'http://localhost:8000/payment/alipay/return/'
+# 是否是沙箱环境
+ALIPAY_DEBUG = True
+
 # =============================================================================
 # 日志配置
 # =============================================================================
