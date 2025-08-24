@@ -13,7 +13,7 @@ def _gen_order_no() -> str:
 
 @transaction.atomic
 def create_orders_from_cart(*, user_id: int, recipient: dict, remark: str = "") -> List[OrderInfo]:
-    cart_qs = ShoppingCart.objects.select_related("product").filter(user_id=user_id, selected=True)
+    cart_qs = ShoppingCart.objects.select_related("product", "product__store").filter(user_id=user_id, selected=True)
     cart_items = list(cart_qs)
     if not cart_items:
         raise ValueError("购物车为空")
@@ -25,9 +25,13 @@ def create_orders_from_cart(*, user_id: int, recipient: dict, remark: str = "") 
     for ci in cart_items:
         p = products.get(ci.product_id)
         if not p:
-            raise ValueError(f"商品不存在: {ci.product_id}")
+            raise ValueError("商品不存在")
         if ci.quantity <= 0:
             raise ValueError("非法数量")
+        if p.stock < ci.quantity:
+            raise ValueError("库存不足")
+        if p.status in ("off_sale", "out_of_stock"):
+            raise ValueError("商品已下架")
         store_groups[p.store_id].append((ci, p))
 
     orders = []
@@ -47,7 +51,7 @@ def create_orders_from_cart(*, user_id: int, recipient: dict, remark: str = "") 
             order_items.append(OrderItem(
                 product_id=p.id,
                 product_name=p.name,
-                product_image=getattr(p, "image", "") or "",
+                product_image=p.thumbnail or "",
                 price=price,
                 quantity=ci.quantity,
                 total_amount=line_total,
@@ -95,12 +99,15 @@ def create_orders_from_cart(*, user_id: int, recipient: dict, remark: str = "") 
 @transaction.atomic
 def create_order_direct(user_id: int, product_id: int, quantity: int, recipient: dict, remark: str = "") -> OrderInfo:
     if quantity <= 0:
-        raise ValueError("购买数量必须大于0")
+        raise ValueError("非法数量")
 
     try:
         product = Product.objects.select_for_update().get(id=product_id)
     except Product.DoesNotExist:
         raise ValueError("商品不存在")
+
+    if product.status in ("off_sale", "out_of_stock"):
+        raise ValueError("商品已下架")
 
     if product.stock < quantity:
         raise ValueError("库存不足")
@@ -139,7 +146,7 @@ def create_order_direct(user_id: int, product_id: int, quantity: int, recipient:
         order=order,
         product=product,
         product_name=product.name,
-        product_image=getattr(product, "image", "") or "",
+        product_image=product.thumbnail or "",
         price=price,
         quantity=quantity,
         total_amount=total_amount,

@@ -23,6 +23,19 @@ from utils.jwt_auth import generate_token
 from utils.error_codes import Codes
 from django.core.cache import cache
 import re, random, logging
+from rest_framework.pagination import PageNumberPagination
+# 新增上传相关
+import os
+from django.conf import settings
+from django.core.files.uploadedfile import UploadedFile
+import imghdr
+
+
+def _get_user_id_from_token(request: Request):
+    payload = getattr(request, 'auth', None)
+    if isinstance(payload, dict):
+        return payload.get('user_id')
+    return None
 
 
 class UserRegisterAPIView(APIView):
@@ -180,6 +193,18 @@ class UserMeAPIView(APIView):
         return CustomResponse(code=Codes.USER_ACTION_OK, msg='获取用户信息成功', data=me_serializer.data, status=200)
 
 
+class UserProfileAPIView(APIView):
+    """基于 Token 返回当前用户资料（无需传查询参数）。
+    GET /user/profile/
+    未登录返回 4101 (UNAUTHORIZED)。"""
+    def get(self, request: Request):
+        uid = _get_user_id_from_token(request)
+        if not uid:
+            return CustomResponse(code=Codes.UNAUTHORIZED, msg='未登录', status=401)
+        user = get_object_or_404(User, id=uid, is_deleted=False)
+        return CustomResponse(code=Codes.USER_ACTION_OK, msg='获取用户信息成功', data=UserMeSerializer(user).data, status=200)
+
+
 class UserAddressCreateAPIView(GenericAPIView, CreateModelMixin):
     """创建用户地址。
 
@@ -191,7 +216,13 @@ class UserAddressCreateAPIView(GenericAPIView, CreateModelMixin):
     serializer_class = UserAddressSerializer
 
     def post(self, request: Request):
-        serializer = self.get_serializer(data=request.data)
+        mutable_data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
+        if 'user' not in mutable_data or not mutable_data.get('user'):
+            uid = _get_user_id_from_token(request)
+            if not uid:
+                return CustomResponse(code=Codes.UNAUTHORIZED, msg='未登录', status=401)
+            mutable_data['user'] = uid
+        serializer = self.get_serializer(data=mutable_data)
         if not serializer.is_valid():
             return CustomResponse(code=Codes.USER_PARAM_INVALID, msg='请求参数不合法', errors=serializer.errors, status=400)
         instance = serializer.save()
@@ -229,23 +260,68 @@ class UserAddressDetailAPIView(GenericAPIView, RetrieveModelMixin, UpdateModelMi
         return CustomResponse(code=Codes.USER_ACTION_OK, msg='删除地址成功', data=None, status=200)
 
 
+class AddressPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
 class UserAddressListAPIView(GenericAPIView, ListModelMixin):
-    """获取用户地址列表（支持按 user 或 user_id 过滤）。"""
+    """获取用户地址列表（支持按 user 或 user_id 过滤；若未提供则尝试 token）。"""
 
     serializer_class = UserAddressSerializer
+    pagination_class = AddressPagination
 
     def get_queryset(self):
         qs = UserAddress.objects.filter(is_deleted=False)
         query_dict = getattr(self.request, "query_params", None) or self.request.GET
         user_id = query_dict.get("user") or query_dict.get("user_id")
+        if not user_id:
+            # 尝试从 token 获取
+            uid = _get_user_id_from_token(self.request)
+            if uid:
+                user_id = uid
         if user_id:
             qs = qs.filter(user_id=user_id)
         return qs
 
     def get(self, request: Request):
-        queryset = self.get_queryset()
+        queryset = self.get_queryset().order_by('-is_default', '-update_time')
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            data = {
+                'results': serializer.data,
+                'count': queryset.count(),
+                'page': paginator.page.number,
+                'page_size': paginator.get_page_size(request)
+            }
+            return CustomResponse(code=Codes.USER_ACTION_OK, msg='获取地址列表成功', data=data, status=200)
+        # 不分页（理论不会走到这里，除非 page_size=None）
         serializer = self.get_serializer(queryset, many=True)
-        return CustomResponse(code=Codes.USER_ACTION_OK, msg='获取地址列表成功', data=serializer.data, status=200)
+        data = {
+            'results': serializer.data,
+            'count': queryset.count(),
+            'page': 1,
+            'page_size': len(serializer.data)
+        }
+        return CustomResponse(code=Codes.USER_ACTION_OK, msg='获取地址列表成功', data=data, status=200)
+
+
+class UserAddressSetDefaultAPIView(APIView):
+    """设置默认地址 POST /user/address/<pk>/default/"""
+    def post(self, request: Request, pk: int):
+        uid = _get_user_id_from_token(request)
+        if not uid:
+            return CustomResponse(code=Codes.UNAUTHORIZED, msg='未登录', status=401)
+        addr = get_object_or_404(UserAddress, pk=pk, user_id=uid, is_deleted=False)
+        # 取消该用户其他默认
+        UserAddress.objects.filter(user_id=uid, is_deleted=False, is_default=True).exclude(id=pk).update(is_default=False)
+        if not addr.is_default:
+            addr.is_default = True
+            addr.save(update_fields=['is_default'])
+        return CustomResponse(code=Codes.USER_ACTION_OK, msg='设置默认地址成功', data={'id': addr.id, 'is_default': True}, status=200)
 
 
 class UserSendCodeAPIView(APIView):
@@ -303,3 +379,70 @@ class UserResetPasswordAPIView(APIView):
         user.save(update_fields=['password'])
         cache.delete(code_key)
         return CustomResponse(code=Codes.PASSWORD_RESET_OK, msg='密码重置成功', data={'user_id': user.id}, status=200)
+
+
+class UserAvatarUploadAPIView(APIView):
+    """用户头像上传接口
+    路由：POST /user/avatar/
+    认证：需要 Token
+    请求：multipart/form-data, 字段名 avatar (图片文件)
+    行为：
+      - 将图片保存到 static/user_avatar_images/<user_id>.<ext>
+      - 若已存在旧文件，直接覆盖
+      - 更新 user.avatar_url 为相对路径（如 static/user_avatar_images/3.png）
+    返回：{"avatar_url": "<完整URL>"}
+    规则：
+      - 允许类型：jpg/jpeg/png/webp
+      - 最大 2MB
+    """
+    MAX_SIZE = 2 * 1024 * 1024
+    ALLOWED_EXT = {'.jpg', '.jpeg', '.png', '.webp'}
+    HDR_MAP = {
+        'jpeg': '.jpg',
+        'png': '.png',
+        'webp': '.webp'
+    }
+
+    def _add_prefix(self, path: str | None):
+        if not path:
+            return path
+        if path.startswith('http://') or path.startswith('https://'):
+            return path
+        base = getattr(settings, 'IMAGE_URL', '') or ''
+        return base.rstrip('/') + '/' + path.lstrip('/')
+
+    def post(self, request: Request):
+        uid = _get_user_id_from_token(request)
+        if not uid:
+            return CustomResponse(code=Codes.UNAUTHORIZED, msg='未登录', status=401)
+        file: UploadedFile | None = request.FILES.get('avatar')
+        if not file:
+            return CustomResponse(code=Codes.USER_PARAM_INVALID, msg='缺少文件', errors={'avatar': 'required'}, status=400)
+        if file.size > self.MAX_SIZE:
+            return CustomResponse(code=Codes.USER_PARAM_INVALID, msg='文件过大(>2MB)', errors={'avatar': 'too_large'}, status=400)
+        # 读取少量字节检测类型
+        head = file.read(512)
+        file.seek(0)
+        kind = imghdr.what(None, head)
+        ext = self.HDR_MAP.get(kind)
+        if not ext:
+            # 退回依据原始文件名后缀判断
+            base_ext = os.path.splitext(file.name)[1].lower()
+            if base_ext not in self.ALLOWED_EXT:
+                return CustomResponse(code=Codes.USER_PARAM_INVALID, msg='不支持的图片类型', errors={'avatar': 'invalid_type'}, status=400)
+            ext = base_ext if base_ext != '.jpeg' else '.jpg'
+        save_dir = os.path.join(settings.BASE_DIR, 'static', 'user_avatar_images')
+        os.makedirs(save_dir, exist_ok=True)
+        filename = f"{uid}{ext}"  # 按用户ID命名，不补零，避免歧义
+        path_fs = os.path.join(save_dir, filename)
+        # 覆盖写入
+        with open(path_fs, 'wb') as f:
+            for chunk in file.chunks():
+                f.write(chunk)
+        # 相对路径（供前端拼 IMAGE_URL 或直接使用）
+        rel_path = f"static/user_avatar_images/{filename}"
+        user = get_object_or_404(User, id=uid, is_deleted=False)
+        user.avatar_url = rel_path
+        user.save(update_fields=['avatar_url'])
+        full_url = self._add_prefix(rel_path)
+        return CustomResponse(code=Codes.USER_ACTION_OK, msg='上传成功', data={'avatar_url': full_url}, status=200)

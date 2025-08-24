@@ -3,6 +3,7 @@ from rest_framework.validators import UniqueValidator
 from apps.user.models import User, UserAddress
 from django.contrib.auth.hashers import make_password
 import re
+from django.conf import settings
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):
@@ -62,6 +63,19 @@ class UserMeSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         exclude = ['password', 'is_deleted', 'create_time', 'update_time', 'status']
+
+    def _add_prefix(self, path: str | None):
+        if not path:
+            return path
+        if path.startswith('http://') or path.startswith('https://'):
+            return path
+        base = getattr(settings, 'IMAGE_URL', '') or ''
+        return base.rstrip('/') + '/' + path.lstrip('/')
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['avatar_url'] = self._add_prefix(data.get('avatar_url'))
+        return data
 
 
 class UserAddressSerializer(serializers.ModelSerializer):

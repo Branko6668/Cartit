@@ -65,6 +65,14 @@ class ProductReviewSerializer(serializers.ModelSerializer):
     def get_user_avatar_url(self, obj: ProductReview):
         return self._add_prefix(getattr(obj.user, 'avatar_url', None))
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # 处理 images 前缀
+        imgs = data.get('images') or []
+        if isinstance(imgs, list):
+            data['images'] = [self._add_prefix(p) for p in imgs]
+        return data
+
     def validate(self, attrs):
         order_item = attrs.get('order_item')
         if order_item is None:

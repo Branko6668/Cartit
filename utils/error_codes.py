@@ -39,6 +39,9 @@ class Codes(IntEnum):
     CART_SET_OK = 3003  # 新增：设定数量成功
     CART_CLEARED = 3004  # 新增：清空购物车成功
     CART_BATCH_UPDATE_OK = 3005  # 新增：批量更新成功
+    ORDER_EMPTY_CART = 3408  # 购物车为空
+    ORDER_STOCK_NOT_ENOUGH = 3409  # 下单库存不足
+    ORDER_PRODUCT_NOT_FOUND = 3410  # 下单商品不存在
 
     # 用户 / 认证（沿用 + 补充）
     USER_ACTION_OK = 4000
@@ -97,6 +100,9 @@ ALIAS = {
     3403: Codes.PRICE_CHANGED,
     3404: Codes.PRODUCT_OFF_SHELF,
     3407: Codes.CART_PARTIAL_VALIDATE_FAILED,
+    3408: Codes.ORDER_EMPTY_CART,
+    3409: Codes.ORDER_STOCK_NOT_ENOUGH,
+    3410: Codes.ORDER_PRODUCT_NOT_FOUND,
     4000: Codes.USER_ACTION_OK,
     4400: Codes.USER_PARAM_INVALID,
     4500: Codes.VERIFICATION_CODE_SENT,
